@@ -9,12 +9,25 @@ from API.Vehicle import MyVehicle, Leader
 import os, signal
 from multiprocessing import Process, Array
 from typing import List, Dict, Tuple
+MAX_VEH_NUM = 100
 
-def run_vehicle(lane_id: int, des_lane_id: int, fid: int, fleet_len: int, 
-    vid: int, location: tuple, velocity: tuple, acceleration: tuple):
+def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int, 
+    fleet_len: int,  vid: int, location: tuple, velocity: tuple, 
+    acceleration: tuple, rounds):
     ## TODO
-    cur_round = 0
+    cur_round = 1
     while(True):
+        rounds[pid] = cur_round
+
+        ## wait for other processes
+        waiting = True
+        while waiting:
+            for r in rounds:
+                if r != cur_round:
+                    continue
+                waiting = False
+        
+        print(cur_round)
         cur_round += 1
 
 
@@ -30,7 +43,11 @@ def main():
     with open(args.input_file, 'r') as f:
         input_words = f.read()
     input_lines = input_words.split('\n')
-    fleets_num = int(input_lines[0])
+    basic_info = input_lines.split(' ')
+    fleets_num = int(basic_info[0])
+    veh_num = int(basic_info[1])
+    rounds = Array('i', [0]*veh_num)
+
     fleets = [None]*fleets_num
     line_index = 1
     veh_processes = []
@@ -58,13 +75,18 @@ def main():
             fleets[i]['vehicle'].append({'vid':vid, 'location':(loc_x,loc_y),
                 'velocity':(vel_x,vel_y), 'acceleration':(acc_x,acc_y)})
             line_index += 1
-            veh_proc = Process(target=run_vehicle, args=(fleets[i]['lane_id'], 
-                fleets[i]['des_lane_id'], fleets[i]['fid'], fleets[i]['fleet_len'],
-                vid, (loc_x,loc_y), (vel_x,vel_y), (acc_x,acc_y)))
+            veh_proc = Process(target=run_vehicle, args=(veh_num, len(veh_processes), 
+                fleets[i]['lane_id'], fleets[i]['des_lane_id'], 
+                fleets[i]['fid'], fleets[i]['fleet_len'],
+                vid, (loc_x,loc_y), (vel_x,vel_y), (acc_x,acc_y), rounds))
             veh_processes.append(veh_proc)
             veh_proc.start()
+    assert(len(veh_processes) == veh_num)
 
     while True:
         for proc in veh_processes:
             proc.join(timeout=2)
+
+if __init__ == '__main__':
+    main()
     
