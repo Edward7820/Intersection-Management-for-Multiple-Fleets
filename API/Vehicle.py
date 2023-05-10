@@ -9,14 +9,16 @@ from zenoh import config
 from datetime import datetime
 from zenoh import Reliability, Sample, session
 from . import math_utils
+from math_utils import euclidean_dist
 from . import Scheduler
 from typing import List, Tuple
 #from Scheduler import Scheduler
 
 
 class MyVehicle():
-    def __init__(self, session=None, velocity: Tuple, location: Tuple, 
-    acceleration: Tuple, vehicle_id: int, fleet_id: int, lane_id: int, delta:float):
+    def __init__(self, session, velocity: Tuple, location: Tuple, 
+    acceleration: Tuple, vehicle_id: int, fleet_id: int, lane_id: int, 
+    des_lane_id: int, delta:float):
         self.velocity = velocity
         self.location = location
         self.session = session
@@ -24,6 +26,7 @@ class MyVehicle():
         self.vehicle_id = vehicle_id
         self.fleet_id = fleet_id
         self.lane_id = lane_id
+        self.des_lane_id = des_lane_id
         self.delta = delta
         self.state_record = [None]*16
         self.finish = False # pass the intersection or not
@@ -40,10 +43,10 @@ class MyVehicle():
     def pub_state(self):
         # key = f"state/{self.lane_id}/{self.fleet_id}/{self.vehicle_id}"
         x = 1 if self.finish else 0
-        state = f"{self.lane_id},{self.fleet_id},{self.vehicle_id},
-        {self.location[0]},{self.location[1]},
-        {self.velocity[0]},{self.velocity[1]},
-        {self.acceleration[0]},{self.acceleration[1]},{x}"
+        state = f"{self.lane_id},{self.fleet_id},{self.vehicle_id}," + \
+        f"{self.location[0]},{self.location[1]}," + \
+        f"{self.velocity[0]},{self.velocity[1]}," + \
+        f"{self.acceleration[0]},{self.acceleration[1]},{x}"
         # print(f"Putting Data ('{key}': '{state}')...")
         self.pub_state.put(state)
 
@@ -54,7 +57,7 @@ class MyVehicle():
             state = {
                 "location": (float(receive[3]),float(receive[4])),
                 "velocity": (float(receive[5]),float(receive[6])),
-                "acceleration": (flaot(receive[7]),float(receive[8]))
+                "acceleration": (float(receive[7]),float(receive[8]))
             }
             rec_lane_id = int(receive[0])
             rec_fleet_id = int(receive[1])
@@ -79,10 +82,32 @@ class MyVehicle():
         # print(f"Putting Data ('{key}': '{buf}')...")
         
         self.pub_zone_status.put(buf)
-        
+
+    def finish_cross(self) -> bool:
+        ## TODO: judge whether the vehicle has crossed the intersection
+        if self.des_lane_id == 0:
+            if euclidean_dist(self.location, (4,-2)) <= 2:
+                return True
+            else:
+                return False
+        elif self.des_lane_id == 1:
+            if euclidean_dist(self.location, (2,4)) <= 2:
+                return True
+            else:
+                return False
+        elif self.des_lane_id == 2:
+            if euclidean_dist(self.location, (-4,2)) <= 2:
+                return True
+            else:
+                return False
+        else:
+            if euclidean_dist(self.location, (-2,-4)) <= 2:
+                return True
+            else:
+                return False
 
 class Leader(MyVehicle):
-    def __init__(self, session=None, velocity: Tuple, location: Tuple, 
+    def __init__(self, session, velocity: Tuple[float], location: Tuple, 
     acceleration: Tuple, vehicle_id: int, fleet_id: int, lane_id: int, delta:float,
     des_lane_id: int, fleet_length: int):
         super().__init__(session, velocity, location, acceleration, vehicle_id, 
@@ -136,7 +161,7 @@ class Leader(MyVehicle):
             if rcv_schedule_map==self.schedule_map:
                 self.agree[rec_lane_id] = True
             else:
-                self.schedule_map = self.schedule_map.union(rec_schedule_map)
+                self.schedule_map = self.schedule_map.union(rcv_schedule_map)
 
         key = "map/**"
         sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
@@ -149,7 +174,7 @@ class Leader(MyVehicle):
             state = {
                 "location": (float(receive[3]),float(receive[4])),
                 "velocity": (float(receive[5]),float(receive[6])),
-                "acceleration": (flaot(receive[7]),float(receive[8]))
+                "acceleration": (float(receive[7]),float(receive[8]))
             }
             rec_lane_id = int(receive[0])
             rec_fleet_id = int(receive[1])
@@ -163,17 +188,21 @@ class Leader(MyVehicle):
 
     def propose(self):
         ## TODO: propose a schedule based on the states of other vehicles
+        pass
 
     def declare_pub_propose(self):
         ## TODO
+        pass
 
     def pub_propose(self):
         ## TODO
+        pass
 
     def declare_sub_propose(self):
         ## TODO
+        pass
     
-    def consensus(self):
+    def schedule_group_consensus(self):
         return self.agree[0] and self.agree[1] and self.agree[2] and self.agree[3]
         
 

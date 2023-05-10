@@ -1,4 +1,5 @@
 import math
+from typing import Tuple
 
 def vector_length(x: float, y: float):
     return math.sqrt(x**2+y**2)
@@ -14,3 +15,6 @@ def quadratic(a:float, b:float, c:float):
     elif key==0:
         root=-b/(2*a)
     return root
+
+def euclidean_dist(x1: Tuple[float], x2: Tuple[float]):
+    return math.sqrt((x1[0]-x2[0])**2 + (x1[1]-x2[1])**2)

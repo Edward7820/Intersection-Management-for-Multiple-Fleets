@@ -5,7 +5,7 @@ import itertools
 import json
 import zenoh
 from datetime import datetime
-# from API.Vehicle import MyVehicle, Leader
+from API.Vehicle import MyVehicle, Leader
 import os, signal
 from multiprocessing import Process, Array
 from typing import List, Dict, Tuple
@@ -14,7 +14,15 @@ MAX_VEH_NUM = 100
 def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int, 
     fleet_len: int,  vid: int, location: tuple, velocity: tuple, 
     acceleration: tuple, rounds):
-    ## TODO
+    delta_t = args.delta_t
+    session = zenoh.open()
+    if vid == 0:
+        # Leader
+        myvehicle = Leader(session, velocity, location, acceleration, vid, fid, lane_id,
+                           delta_t, des_lane_id, fleet_len)
+    else:
+        myvehicle = MyVehicle(session, velocity, location, acceleration,
+                               vid, fid, lane_id, des_lane_id, delta_t)
     cur_round = 1
     while(True):
         rounds[pid] = cur_round
@@ -26,7 +34,12 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
                 if r != cur_round:
                     continue
                 waiting = False
-                
+
+        myvehicle.pub_state()
+        if vid == 0:
+            if not myvehicle.schedule_group_consensus():
+                myvehicle.pub_schedule_map()
+
         # time.sleep(5)
         # print(cur_round, args.delta_t)
         cur_round += 1
