@@ -48,6 +48,7 @@ def arrival_time_for_zone(cur_loc: Tuple[float], speed, conflict_zones, zone_idx
         dist = euclidean_dist(south_point, cur_loc)
     elif zone_idx_list[idx] == 0 and idx >= 1:
         dist = euclidean_dist(south_point, cur_loc)
+    return dist/speed
 
 def get_conflict_zone_idx(lane_id: int, des_lane_id: int):
     ## conflict_zones: a list of tuples (x_min, y_min, x_max, y_max)

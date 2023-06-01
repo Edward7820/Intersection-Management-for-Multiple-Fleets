@@ -46,7 +46,7 @@ class MyVehicle():
         state = f"{self.lane_id},{self.fleet_id},{self.vehicle_id}," + \
         f"{self.location[0]},{self.location[1]}," + \
         f"{self.velocity[0]},{self.velocity[1]}," + \
-        f"{self.acceleration[0]},{self.acceleration[1]},{x}"
+        f"{self.acceleration[0]},{self.acceleration[1]},{self.des_lane_id},{x}"
         # print(f"Putting Data ('{key}': '{state}')...")
         self.pub_state.put(state)
 
@@ -57,12 +57,13 @@ class MyVehicle():
             state = {
                 "location": (float(receive[3]),float(receive[4])),
                 "velocity": (float(receive[5]),float(receive[6])),
-                "acceleration": (float(receive[7]),float(receive[8]))
+                "acceleration": (float(receive[7]),float(receive[8])),
+                "des_lane_id": int(receive[9])
             }
             rec_lane_id = int(receive[0])
             rec_fleet_id = int(receive[1])
             rec_vehicle_id = int(receive[2])
-            rec_finish = int(receive[9])
+            rec_finish = int(receive[10])
             if rec_finish==0:
                 self.state_record[rec_vehicle_id] = state
 
@@ -174,12 +175,13 @@ class Leader(MyVehicle):
             state = {
                 "location": (float(receive[3]),float(receive[4])),
                 "velocity": (float(receive[5]),float(receive[6])),
-                "acceleration": (float(receive[7]),float(receive[8]))
+                "acceleration": (float(receive[7]),float(receive[8])),
+                "des_lane_id": int(receive[9])
             }
             rec_lane_id = int(receive[0])
             rec_fleet_id = int(receive[1])
             rec_vehicle_id = int(receive[2])
-            rec_finish = int(receive[9])
+            rec_finish = int(receive[10])
             if rec_finish==0:
                 self.fleets_state_record[(rec_lane_id,rec_fleet_id,rec_vehicle_id)] = state
 

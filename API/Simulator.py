@@ -1,11 +1,8 @@
-import sys
-import time
-import argparse
-import itertools
 import math
 from typing import List, Dict
 import copy
 from . import math_utils
+CONFLICT_ZONE_SIZE = 4
 
 def simulate_passing_order(order: list[tuple], conflict_zones: list[tuple], states: list[dict], safety_gap: float):
     ## order: a list of tuples (lane_id, des_lane_id, fleet_id, vehicle_id)
@@ -14,12 +11,27 @@ def simulate_passing_order(order: list[tuple], conflict_zones: list[tuple], stat
     ## safety_gap: min safety gap between two consecutive vehicles passing through the same conflict zone
     ## Return t_assign: list, total_delay: float
     t_assign = []
-    t_max = [None]*4 ## the largest arrival time that each conflict zone has been occupied
-    for veh in order:
+    t_max = [None]*len(conflict_zones) ## the largest arrival time that each conflict zone has been occupied
+    for idx, veh in enumerate(order):
         t_assign.append([])
-        for zone_idx in math_utils.get_conflict_zone_idx():
+        zone_idx_list = math_utils.get_conflict_zone_idx(veh[0], veh[1])
+        for zone_idx in zone_idx_list:
+            location = states[idx]['location']
+            velocity = states[idx]['velocity']
+            speed = math_utils.vector_length(velocity[0],velocity[1])
             if t_max[zone_idx] == None:
-                pass
+                t_assign[-1].append(math_utils.arrival_time_for_zone(location,speed,conflict_zones,zone_idx_list,zone_idx))
+            else:
+                t_assign[-1].append(max(math_utils.arrival_time_for_zone(location,speed,conflict_zones,zone_idx_list,zone_idx),
+                                        t_max[zone_idx] + safety_gap))
+        for zone_idx in zone_idx_list:
+            t_max[zone_idx] = t_assign[-1][zone_idx]
+    assert len(t_assign) == len(order)
 
+    total_delay = 0
+    for idx in range(len(order)):
+        speed = math_utils.vector_length(states[idx]['velocity'][0],states[idx]['velocity'][1])
+        total_delay += (t_assign[idx][-1] + CONFLICT_ZONE_SIZE/speed)
+    return total_delay, t_assign
 
 
