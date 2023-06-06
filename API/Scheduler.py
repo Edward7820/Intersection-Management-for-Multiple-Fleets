@@ -1,7 +1,7 @@
 import math
-from datetime import datetime
 from typing import List, Dict
 from copy import *
+import random
 from . import math_utils
 from . import Simulator
 
@@ -14,6 +14,7 @@ MAX_ACCELERATE = 1 #max acceleration of each vehicle
 def arrival_time(distance: float, speed: float, acceleration: float):
     t = math_utils.quadratic(acceleration/2, speed, -distance)
     return t
+
 
 class Node():
     def __init__(self, passing_order):
@@ -84,13 +85,23 @@ class Scheduler():
     
     def get_dist_to_center(self, veh):
         return math_utils.euclidean_dist((0,0),self.get_state[veh]["location"])
+    
+    def get_possible_next_veh(self, node):
+        remain_veh = list(filter(lambda veh: veh not in node.passing_order, self.all_veh))
+        if len(remain_veh) == 0:
+            return []
+        possible_next_veh = []
+        for veh in remain_veh:
+            if veh[3] == 0 or (veh[0], veh[1], veh[2], veh[3]-1) in node.passing_order:
+                possible_next_veh.append(veh)
+        return possible_next_veh
 
     def simulate(self, node):
         states_list = [self.get_state(veh) for veh in node.passing_order]
         total_delay, _ = Simulator.simulate_passing_order(node.passing_order,self.conflict_zones,states_list,self.safety_gap)
         node.total_delay = total_delay
 
-        remain_veh = list(filter(lambda veh: veh in node.passing_order, self.all_veh))
+        remain_veh = list(filter(lambda veh: veh not in node.passing_order, self.all_veh))
         remain_veh = sorted(remain_veh, key=lambda veh: self.get_dist_to_center(veh))
         complete_passing_order = node.passing_order + remain_veh
         states_list = [self.get_state(veh) for veh in complete_passing_order]
@@ -101,22 +112,46 @@ class Scheduler():
     def search(self, num_iter):
         for _ in range(num_iter):
             node = self.select_node()
+            node = self.expand_node(node)
             if node:
                 score = self.simulate(node)
                 node.backpropagate(score)
         
-        ## TODO: get best passing order
+        ## get best passing order
+        node = self.root
+        while node.children:
+            best_score = -1
+            best_node = None
+            for child in node.children:
+                if child.score > best_score:
+                    best_score = child.score
+                    best_node = child
+            node = best_node
+        return node.passing_order
+
 
     def select_node(self):
         node = self.root
         while node.children:
             if not all(child.visits for child in node.children):
-                return self.expand_node(node)
+                return node
             
             node = node.select()
         return node
 
     def expand_node(self, node):
-        raise NotImplementedError
+        if not node.children:
+            possible_next_veh = self.get_possible_next_veh(node)
+            if not possible_next_veh: # leaf node:
+                return node
+            for veh in possible_next_veh:
+                next_order = deepcopy(node.passing_order)
+                next_order.append(veh)
+                node.expand(next_order)
+        assert node.children
+
+        unvisited_children = list(filter(lambda x: x.visits == 0, node.children))
+        assert len(unvisited_children) > 0
+        return random.choice(unvisited_children)
 
  
