@@ -4,7 +4,7 @@ import copy
 from . import math_utils
 CONFLICT_ZONE_SIZE = 4
 
-def simulate_passing_order(order: list[tuple], conflict_zones: list[tuple], states: list[dict], safety_gap: float):
+def simulate_passing_order(order: list[tuple], conflict_zones: list[tuple], states: list[dict], safety_gap: float, lane_id, fleet_id, alpha):
     ## order: a list of tuples (lane_id, des_lane_id, fleet_id, vehicle_id)
     ## conflict_zones: a list of tuples (x_min, y_min, x_max, y_max)
     ## states: a list of dict {"location": (...), "velocity": (...), "acceleration": (...)}
@@ -31,7 +31,10 @@ def simulate_passing_order(order: list[tuple], conflict_zones: list[tuple], stat
     total_delay = 0
     for idx in range(len(order)):
         speed = math_utils.vector_length(states[idx]['velocity'][0],states[idx]['velocity'][1])
-        total_delay += (max(t_assign[idx]) + CONFLICT_ZONE_SIZE/speed)
+        if order[idx][0] == lane_id and order[idx][2] == fleet_id:
+            total_delay += alpha * ((max(t_assign[idx]) + CONFLICT_ZONE_SIZE/speed))
+        else:
+            total_delay += (max(t_assign[idx]) + CONFLICT_ZONE_SIZE/speed)
     return total_delay, t_assign
 
 

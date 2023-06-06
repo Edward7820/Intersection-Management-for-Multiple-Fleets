@@ -87,22 +87,22 @@ class MyVehicle():
     def finish_cross(self) -> bool:
         ## TODO: judge whether the vehicle has crossed the intersection
         if self.des_lane_id == 0:
-            if euclidean_dist(self.location, (4,-2)) <= 2:
+            if self.location[0] >= 4:
                 return True
             else:
                 return False
         elif self.des_lane_id == 1:
-            if euclidean_dist(self.location, (2,4)) <= 2:
+            if self.location[1] >= 4:
                 return True
             else:
                 return False
         elif self.des_lane_id == 2:
-            if euclidean_dist(self.location, (-4,2)) <= 2:
+            if self.location[0] <= -4:
                 return True
             else:
                 return False
         else:
-            if euclidean_dist(self.location, (-2,-4)) <= 2:
+            if self.location[1] <= -4:
                 return True
             else:
                 return False

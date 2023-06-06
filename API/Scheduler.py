@@ -109,11 +109,14 @@ class Node():
 
 
 class Scheduler():
-    def __init__(self, conflict_zones: list, states: dict, safety_gap: float):
+    def __init__(self, conflict_zones: list, states: dict, safety_gap: float, my_lane_id: int, my_fleet_id: int, alpha: float):
         ## states: (lane_id, fleet_id, veh_id) -> state
         self.conflict_zones = conflict_zones
         self.states = states
         self.safety_gap = safety_gap
+        self.my_lane_id = my_lane_id
+        self.my_fleet_id = my_fleet_id
+        self.alpha = alpha
         self.all_veh = []
         for veh in states.keys():
             self.all_veh.append((veh[0],self.states[veh]["des_lane_id"],veh[1],veh[2]))
@@ -147,14 +150,14 @@ class Scheduler():
 
     def simulate(self, node):
         states_list = [self.get_state(veh) for veh in node.passing_order]
-        total_delay, _ = Simulator.simulate_passing_order(node.passing_order,self.conflict_zones,states_list,self.safety_gap)
+        total_delay, _ = Simulator.simulate_passing_order(node.passing_order,self.conflict_zones,states_list,self.safety_gap,self.my_lane_id,self.my_fleet_id,self.alpha)
         node.total_delay = total_delay
 
         remain_veh = list(filter(lambda veh: veh not in node.passing_order, self.all_veh))
         remain_veh = sorted(remain_veh, key=lambda veh: self.get_dist_to_center(veh))
         complete_passing_order = node.passing_order + remain_veh
         states_list = [self.get_state(veh) for veh in complete_passing_order]
-        total_delay_2, _ = Simulator.simulate_passing_order(complete_passing_order,self.conflict_zones,states_list,self.safety_gap)
+        total_delay_2, _ = Simulator.simulate_passing_order(complete_passing_order,self.conflict_zones,states_list,self.safety_gap,self.my_lane_id,self.my_fleet_id,self.alpha)
         node.best_total_delay  = total_delay_2
         return node.normalize_delay()
 

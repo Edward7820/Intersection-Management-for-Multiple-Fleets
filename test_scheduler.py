@@ -54,7 +54,7 @@ def main():
             line_index += 1
 
     conflict_zones = [(0,0,4,4),(-4,0,0,4),(-4,-4,0,0),(0,-4,4,0)]
-    scheduler = Scheduler(conflict_zones, states, 2.0)
+    scheduler = Scheduler(conflict_zones, states, 2.0, 1, 0, 1.2)
     print(scheduler.search(100))
     
     
