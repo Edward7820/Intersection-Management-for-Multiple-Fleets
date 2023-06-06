@@ -27,6 +27,7 @@ def arrival_time(distance: float, speed: float, acceleration: float):
 
 def arrival_time_for_zone(cur_loc: Tuple[float], speed, conflict_zones, zone_idx_list, idx):
     # conflict_zones: a list of tuples (x_min, y_min, x_max, y_max)
+    # print(zone_idx_list, idx)
     zone = conflict_zones[idx]
     north_point = ((zone[0]+zone[2])/2, zone[3])
     south_point = ((zone[0]+zone[2])/2, zone[1])
