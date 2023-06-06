@@ -160,6 +160,14 @@ class Scheduler():
         total_delay_2, _ = Simulator.simulate_passing_order(complete_passing_order,self.conflict_zones,states_list,self.safety_gap,self.my_lane_id,self.my_fleet_id,self.alpha)
         node.best_total_delay  = total_delay_2
         return node.normalize_delay()
+    
+    def passing_order_to_time_slot(self, passing_order):
+        states_list = [self.get_state(veh) for veh in passing_order]
+        _, t_assign = Simulator.simulate_passing_order(passing_order,self.conflict_zones,states_list,self.safety_gap,self.my_lane_id,self.my_fleet_id,self.alpha)
+        time_slot = dict()
+        for idx, veh in enumerate(passing_order):
+            time_slot[(veh[0],veh[2],veh[3])] = t_assign[idx]
+        return time_slot
 
     def search(self, num_iter):
         for _ in range(num_iter):

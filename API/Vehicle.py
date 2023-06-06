@@ -11,8 +11,10 @@ from zenoh import Reliability, Sample, session
 from . import math_utils
 from math_utils import euclidean_dist
 from . import Scheduler
+from . import Simulator
 from typing import List, Tuple
 #from Scheduler import Scheduler
+CONFLICT_ZONES = [(0,0,4,4),(-4,0,0,4),(-4,-4,0,0),(0,-4,4,0)]
 
 
 class MyVehicle():
@@ -85,7 +87,7 @@ class MyVehicle():
         self.pub_zone_status.put(buf)
 
     def finish_cross(self) -> bool:
-        ## TODO: judge whether the vehicle has crossed the intersection
+        ## judge whether the vehicle has crossed the intersection
         if self.des_lane_id == 0:
             if self.location[0] >= 4:
                 return True
@@ -168,7 +170,7 @@ class Leader(MyVehicle):
         sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
 
     def declare_sub_state(self):
-        ## TODO: subscribe state from other fleets
+        ## subscribe state from other fleets
         def listener(sample: Sample):
             # print(f">> [Subscriber] Received {sample.kind} ('{sample.key_expr}': '{sample.payload.decode('utf-8')}')")
             receive = sample.payload.decode('utf-8').split(',')
@@ -188,17 +190,28 @@ class Leader(MyVehicle):
         key = f"state/**"
         sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
 
-    def propose(self):
-        ## TODO: propose a schedule based on the states of other vehicles
-        pass
+    def propose(self, num_iter, alpha):
+        ## propose a schedule based on the states of other vehicles
+        scheduler = Scheduler.Scheduler(CONFLICT_ZONES,self.fleets_state_record,1.5,self.lane_id,self.fleet_id,alpha)
+        passing_order = scheduler.search(num_iter)
+        time_slot = scheduler.passing_order_to_time_slot(passing_order)
+        self.proposal = time_slot
+        # self.proposal format:
+        # (lane_id, fleet_id, veh_id) -> [deadline, deadline, deadline, deadline]
 
     def declare_pub_propose(self):
-        ## TODO
-        pass
+        key = f"proposal/{self.lane_id}/{self.fleet_id}"
+        self.pub_propose = self.session.declare_publisher(key)
 
     def pub_propose(self):
-        ## TODO
-        pass
+        key = f"proposal/{self.lane_id}/{self.fleet_id}"
+        pub_content = f"{self.lane_id},{self.fleet_id}:"
+        for veh in self.proposal:
+            deadlines = self.proposal[veh]
+            assert len(veh) == 3 and len(deadlines) == 4
+            pub_content += f"{veh[0]},{veh[1]},{veh[2]},{deadlines[0]},{deadlines[1]},{deadlines[2]},{deadlines[3]};"
+        
+        self.pub_propose.put(pub_content)
 
     def declare_sub_propose(self):
         ## TODO

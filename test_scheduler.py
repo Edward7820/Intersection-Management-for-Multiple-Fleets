@@ -55,8 +55,10 @@ def main():
 
     conflict_zones = [(0,0,4,4),(-4,0,0,4),(-4,-4,0,0),(0,-4,4,0)]
     scheduler = Scheduler(conflict_zones, states, 2.0, 1, 0, 1.2)
-    print(scheduler.search(100))
-    
+    passing_order = scheduler.search(200)
+    print(passing_order)
+    t_assign = scheduler.passing_order_to_time_slot(passing_order)
+    print(t_assign)
     
 
 if __name__ == '__main__':
