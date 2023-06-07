@@ -34,21 +34,21 @@ def arrival_time_for_zone(cur_loc: Tuple[float], speed, conflict_zones, zone_idx
     east_point = (zone[2],(zone[1]+zone[3])/2)
     west_point = (zone[0],(zone[1]+zone[3])/2)
     if zone_idx_list[idx] == 0 and idx == 0:
-        dist = euclidean_dist(east_point, cur_loc)
+        dist = euclidean_dist(west_point, cur_loc)
     elif zone_idx_list[idx] == 1 and idx >= 1:
-        dist = euclidean_dist(east_point, cur_loc)
+        dist = euclidean_dist(west_point, cur_loc)
     elif  zone_idx_list[idx] == 2 and idx == 0:
-        dist = euclidean_dist(west_point, cur_loc)
+        dist = euclidean_dist(east_point, cur_loc)
     elif zone_idx_list[idx] == 3 and idx >= 1:
-        dist = euclidean_dist(west_point, cur_loc)
+        dist = euclidean_dist(east_point, cur_loc)
     elif zone_idx_list[idx] == 1 and idx == 0:
-        dist = euclidean_dist(north_point, cur_loc)
+        dist = euclidean_dist(south_point, cur_loc)
     elif zone_idx_list[idx] == 2 and idx >= 1:
-        dist = euclidean_dist(north_point, cur_loc)
+        dist = euclidean_dist(south_point, cur_loc)
     elif zone_idx_list[idx] == 3 and idx == 0:
-        dist = euclidean_dist(south_point, cur_loc)
+        dist = euclidean_dist(north_point, cur_loc)
     elif zone_idx_list[idx] == 0 and idx >= 1:
-        dist = euclidean_dist(south_point, cur_loc)
+        dist = euclidean_dist(north_point, cur_loc)
     return dist/speed
 
 def get_conflict_zone_idx(lane_id: int, des_lane_id: int):
