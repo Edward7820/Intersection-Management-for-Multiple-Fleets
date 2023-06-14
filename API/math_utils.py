@@ -71,3 +71,20 @@ def get_conflict_zone_idx(lane_id: int, des_lane_id: int):
     for i in range((des_lane_id-lane_id)%4):
         conflict_zones.append((lane_id+i)%4)
     return conflict_zones
+
+def get_cur_conflict_zone_id(conflict_zones, cur_loc):
+    for idx, conflict_zone in enumerate(conflict_zones):
+        x_min = conflict_zone[0]
+        x_max = conflict_zone[2]
+        y_min = conflict_zone[1]
+        y_max = conflict_zone[3]
+        if cur_loc[0] >= x_min and cur_loc[0] <= x_max and cur_loc[1] >= y_min and cur_loc[1] <= y_max:
+            return idx
+    return -1
+
+def get_min_arrival_time(conflict_zones, lane_id, des_lane_id, location, speed):
+    zone_size = abs(conflict_zones[0][2]-conflict_zones[0][0])
+    zone_idx_list = get_conflict_zone_idx(lane_id, des_lane_id)
+    min_arrival_time = arrival_time_for_zone(location,speed,conflict_zones,zone_idx_list,0)
+    min_arrival_time += len(zone_idx_list)*zone_size/speed
+    return min_arrival_time

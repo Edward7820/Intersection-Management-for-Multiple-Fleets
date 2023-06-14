@@ -36,10 +36,12 @@ def simulate_passing_order(order: list[tuple], conflict_zones: list[tuple], stat
     total_delay = 0
     for idx in range(len(order)):
         speed = math_utils.vector_length(states[idx]['velocity'][0],states[idx]['velocity'][1])
+        location = states[idx]['location']
+        t_min =math_utils.get_min_arrival_time(conflict_zones,order[idx][0],order[idx][1],location,speed)
         if order[idx][0] == lane_id and order[idx][2] == fleet_id:
-            total_delay += alpha * (max(t_assign[idx]))
+            total_delay += alpha * (max(t_assign[idx]) - t_min)
         else:
-            total_delay += max(t_assign[idx])
+            total_delay += (max(t_assign[idx]) - t_min)
     return total_delay, t_assign
 
 

@@ -9,11 +9,11 @@ from zenoh import config
 from datetime import datetime
 from zenoh import Reliability, Sample, session
 from . import math_utils
-from math_utils import euclidean_dist
+from math_utils import euclidean_dist, get_conflict_zone_idx, get_min_arrival_time
 from . import Scheduler
 from . import Simulator
 from typing import List, Tuple
-#from Scheduler import Scheduler
+from Scheduler import Scheduler
 CONFLICT_ZONES = [(0,0,4,4),(-4,0,0,4),(-4,-4,0,0),(0,-4,4,0)]
 
 
@@ -32,6 +32,7 @@ class MyVehicle():
         self.delta = delta
         self.state_record = [None]*16
         self.finish = False # pass the intersection or not
+        self.zone_idx_list = get_conflict_zone_idx(self.lane_id, self.des_lane_id)
 
         self.declare_pub_state()
         self.declare_sub_state()
@@ -219,7 +220,6 @@ class Leader(MyVehicle):
     
     def schedule_group_consensus(self):
         return self.agree[0] and self.agree[1] and self.agree[2] and self.agree[3]
-        
 
     '''
     def propose(self, schedule_granularity=1.0): 
