@@ -8,12 +8,10 @@ import math
 from zenoh import config
 from datetime import datetime
 from zenoh import Reliability, Sample, session
-from . import math_utils
-from math_utils import euclidean_dist, get_conflict_zone_idx, get_min_arrival_time, vector_length
-from . import Scheduler
+from .math_utils import euclidean_dist, get_conflict_zone_idx, get_min_arrival_time, vector_length
 from . import Simulator
 from typing import List, Tuple
-from Scheduler import Scheduler
+from .Scheduler import Scheduler
 CONFLICT_ZONES = [(0,0,4,4),(-4,0,0,4),(-4,-4,0,0),(0,-4,4,0)]
 
 

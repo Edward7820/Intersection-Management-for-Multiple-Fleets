@@ -20,6 +20,7 @@ RUNNING = 4
 def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int, 
     fleet_len: int,  vid: int, location: tuple, velocity: tuple, 
     acceleration: tuple, rounds):
+    # print(f"start running vehicle {lane_id}-{fid}-{vid}")
     delta_t = args.delta_t
     session = zenoh.open()
     if vid == 0:
@@ -37,18 +38,19 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
         ## wait for other processes
         waiting = True
         while waiting:
-            for r in rounds:
-                if r != cur_round:
-                    continue
+            if all([r>=cur_round for r in rounds]):
                 waiting = False
 
-        if myvehicle.finish_cross:
+        if myvehicle.finish_cross():
             break
+
+        print(f"start running vehicle {lane_id}-{fid}-{vid}")
 
         myvehicle.pub_state()
         if phase != RUNNING:
             if vid == 0:
                 if phase == SCHEDULE_GROUP_FORMING:
+                    # print(myvehicle.schedule_map)
                     myvehicle.pub_schedule_map()
                     if myvehicle.schedule_group_consensus():
                         print(f"Fleet {lane_id}-{fid} got final schedule group:")
@@ -77,7 +79,7 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
             ## TODO
             pass
 
-        time.sleep(0.5)
+        # time.sleep(0.5)
         cur_round += 1
 
 
