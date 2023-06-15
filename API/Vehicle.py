@@ -240,11 +240,12 @@ class Leader(MyVehicle):
         for (lane_id, fleet_id) in self.other_proposal:
             score = self.scoring(self.other_proposal[(lane_id, fleet_id)])
             pub_content += f"{lane_id},{fleet_id},{score};"
+        score = self.scoring(self.proposal)
+        pub_content += f"{self.lane_id},{self.fleet_id},{score};"
         self.pub_score.put(pub_content)
 
     def declare_sub_score(self):
         self.all_score = None
-        # self.all_score[(self.lane_id,self.fleet_id)] = self.scoring(self.proposal)
         def listener(sample: Sample):
             receive = sample.payload.decode('utf-8').split(':')
             rec_scores = receive[1].split(';')[:(-1)]
