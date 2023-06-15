@@ -138,7 +138,7 @@ class Leader(MyVehicle):
         self.intersection_occupied = False
         #==================================#
         self.proposal = None
-        self.other_proposal = dict()
+        self.all_proposal = dict()
         self.all_score = dict()
         self.final_assignment = None
 
@@ -172,13 +172,14 @@ class Leader(MyVehicle):
             pub_map += ","
             pub_map += str(self.fleet_length)
             pub_map += ";"
-        # print(f"Putting Data ('{key}': '{state}')...")
+        #print(f"Putting Data ('{key}': '{pub_map}')...")
         self.publisher_schedule_map.put(pub_map)
 
     def declare_sub_schedule_map(self):
         def listener(sample: Sample):
             rcv_schedule_map = set()
             receive = sample.payload.decode('utf-8').split(":")
+            #print(receive)
             rec_lane_id = int(receive[0])
             rec_fleet_info = receive[1].split(";")[:(-1)]
             for rec_fleet in rec_fleet_info:
@@ -255,22 +256,20 @@ class Leader(MyVehicle):
             receive = sample.payload.decode('utf-8').split(':')
             lane_id = int(receive[0].split(',')[0])
             fleet_id = int(receive[0].split(',')[1])
-            self.other_proposal[(lane_id, fleet_id)] = dict()
+            self.all_proposal[(lane_id, fleet_id)] = dict()
             rec_proposal = receive[1].split(';')
             for s in rec_proposal[:(-1)]:
                 s = s.split(',')
                 veh = (int(s[0]),int(s[1]),int(s[2]))
                 deadlines = [float(s[3]),float(s[4]),float(s[5]),float(s[6])]
-                self.other_proposal[(lane_id,fleet_id)][veh] = deadlines
+                self.all_proposal[(lane_id,fleet_id)][veh] = deadlines
                 
         key = "proposal/**"
         sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
 
     def all_proposal_received(self):
         for (lane_id,des_lane_id,fleet_id,fleet_len) in self.schedule_map:
-            if lane_id == self.lane_id and fleet_id == self.fleet_id:
-                continue
-            if (lane_id,fleet_id) not in self.other_proposal:
+            if (lane_id,fleet_id) not in self.all_proposal:
                 return False
         return True
     
@@ -293,11 +292,9 @@ class Leader(MyVehicle):
     def pub_score(self):
         key = f"score/{self.lane_id}/{self.fleet_id}"
         pub_content = f"{self.lane_id},{self.fleet_id}:"
-        for (lane_id, fleet_id) in self.other_proposal:
-            score = self.scoring(self.other_proposal[(lane_id, fleet_id)])
+        for (lane_id, fleet_id) in self.all_proposal:
+            score = self.scoring(self.all_proposal[(lane_id, fleet_id)])
             pub_content += f"{lane_id},{fleet_id},{score};"
-        score = self.scoring(self.proposal)
-        pub_content += f"{self.lane_id},{self.fleet_id},{score};"
         self.publisher_score.put(pub_content)
 
     def declare_sub_score(self):
@@ -341,7 +338,7 @@ class Leader(MyVehicle):
                 proposer = (lane_id,fleet_id)
             elif final_score[(lane_id,fleet_id)] == max_score and lane_id == proposer[0] and fleet_id < proposer[1]:
                 proposer = (lane_id,fleet_id)
-        self.final_assignment = self.other_proposal[proposer]
+        self.final_assignment = self.all_proposal[proposer]
 
     def declare_pub_final_assignment(self):
         key = f"final/{self.lane_id}/{self.fleet_id}"
