@@ -211,7 +211,7 @@ class Leader(MyVehicle):
             rec_fleet_id = int(receive[1])
             rec_vehicle_id = int(receive[2])
             rec_finish = int(receive[10])
-            if rec_finish == 0 and (rec_lane_id,rec_fleet_id) in [(k[0],k[2]) for k in list(self.schedule_map.keys())]:
+            if rec_finish == 0 and (rec_lane_id,rec_fleet_id) in [(k[0],k[2]) for k in self.schedule_map]:
                 self.fleets_state_record[(rec_lane_id,rec_fleet_id,rec_vehicle_id)] = state
 
         key = f"state/**"

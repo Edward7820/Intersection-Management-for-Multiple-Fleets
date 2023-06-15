@@ -40,6 +40,7 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
         while waiting:
             if all([r>=cur_round for r in rounds]):
                 waiting = False
+                time.sleep(0.5)
 
         if myvehicle.finish_cross():
             break
@@ -48,7 +49,7 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
         if phase != RUNNING:
             if vid == 0:
                 if phase == SCHEDULE_GROUP_FORMING:
-                    # print(myvehicle.schedule_map)
+                    print(myvehicle.schedule_map)
                     myvehicle.pub_schedule_map()
                     if myvehicle.schedule_group_consensus():
                         print(f"Fleet {lane_id}-{fid} got final schedule group: {myvehicle.schedule_map}")
