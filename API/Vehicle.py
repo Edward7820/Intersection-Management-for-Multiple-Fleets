@@ -118,7 +118,7 @@ class Leader(MyVehicle):
         fleet_id, lane_id, des_lane_id, delta)
         self.fleet_length = fleet_length
         self.schedule_map = set()
-        self.schedule_map.add((self.lane_id, self.des_lane_id, self.fleet_id))
+        self.schedule_map.add((self.lane_id, self.des_lane_id, self.fleet_id, self.fleet_length))
         self.agree = [False]*4
         self.agree[self.lane_id] = True
         self.fleets_state_record = dict()
@@ -152,6 +152,8 @@ class Leader(MyVehicle):
             pub_map += str(self.des_lane_id)
             pub_map += ","
             pub_map += str(self.fleet_id)
+            pub_map += ","
+            pub_map += str(self.fleet_length)
             pub_map += ";"
         # print(f"Putting Data ('{key}': '{state}')...")
         self.pub_schedule_map.put(pub_map)
@@ -164,7 +166,7 @@ class Leader(MyVehicle):
             rec_fleet_info = receive[1].split(";")[:(-1)]
             for rec_fleet in rec_fleet_info:
                 rec_fleet = rec_fleet.split(",")
-                rcv_schedule_map.add((int(rec_fleet[0]),int(rec_fleet[1]),int(rec_fleet[2])))
+                rcv_schedule_map.add((int(rec_fleet[0]),int(rec_fleet[1]),int(rec_fleet[2]),int(rec_fleet[3])))
             if rcv_schedule_map==self.schedule_map:
                 self.agree[rec_lane_id] = True
             else:
@@ -191,7 +193,7 @@ class Leader(MyVehicle):
             rec_fleet_id = int(receive[1])
             rec_vehicle_id = int(receive[2])
             rec_finish = int(receive[10])
-            if rec_finish == 0 and (rec_lane_id,state["des_lane_id"],rec_fleet_id) in self.schedule_map:
+            if rec_finish == 0 and (rec_lane_id,rec_fleet_id) in [(k[0],k[2]) for k in list(self.schedule_map.keys())]:
                 self.fleets_state_record[(rec_lane_id,rec_fleet_id,rec_vehicle_id)] = state
 
         key = f"state/**"
