@@ -46,32 +46,34 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
             break
 
         myvehicle.pub_state()
-        if vid == 0:
-            if phase == SCHEDULE_GROUP_FORMING:
-                myvehicle.pub_schedule_map()
-                if myvehicle.schedule_group_consensus():
-                    print(f"Fleet {lane_id}-{fid} got final schedule group:")
-                    print(myvehicle.schedule_map)
-                    assert myvehicle.all_states_received()
-                    phase = COLLECT_PROPOSALS
-            elif phase == COLLECT_PROPOSALS:
-                myvehicle.propose(1000, 1.2)
-                print(f"Fleet {lane_id}-{fid} proposed time slot assignment:")
-                print(myvehicle.proposal)
-                myvehicle.pub_propose()
-                if myvehicle.all_proposal_received():
-                    print(f"Fleet {lane_id}-{fid} received all proposals!")
-                    phase = COLLECT_SCORES
-            elif phase == COLLECT_SCORES:
-                myvehicle.pub_score()
-                if myvehicle.all_score_received():
-                    print(f"Fleet {lane_id}-{fid} received all score!")
-                    myvehicle.get_final_assignment()
-                    print(f"Final assignment for Fleet {lane_id}-{fid}: {myvehicle.final_assignment}")
+        if phase != RUNNING:
+            if vid == 0:
+                if phase == SCHEDULE_GROUP_FORMING:
+                    myvehicle.pub_schedule_map()
+                    if myvehicle.schedule_group_consensus():
+                        print(f"Fleet {lane_id}-{fid} got final schedule group:")
+                        print(myvehicle.schedule_map)
+                        assert myvehicle.all_states_received()
+                        phase = COLLECT_PROPOSALS
+                elif phase == COLLECT_PROPOSALS:
+                    myvehicle.propose(1000, 1.2)
+                    print(f"Fleet {lane_id}-{fid} proposed time slot assignment:")
+                    print(myvehicle.proposal)
+                    myvehicle.pub_propose()
+                    if myvehicle.all_proposal_received():
+                        print(f"Fleet {lane_id}-{fid} received all proposals!")
+                        phase = COLLECT_SCORES
+                elif phase == COLLECT_SCORES:
+                    myvehicle.pub_score()
+                    if myvehicle.all_score_received():
+                        print(f"Fleet {lane_id}-{fid} received all score!")
+                        myvehicle.get_final_assignment()
+                        print(f"Final assignment for Fleet {lane_id}-{fid}: {myvehicle.final_assignment}")
+                        phase = RUNNING
+
+            else:
+                if len(myvehicle.assignment) > 0:
                     phase = RUNNING
-            elif phase == RUNNING:
-                ## TODO
-                pass
 
 
         time.sleep(0.5)

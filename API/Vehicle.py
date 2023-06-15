@@ -38,7 +38,7 @@ class MyVehicle():
         self.declare_pub_state()
         self.declare_sub_state()
 
-        self.declare_sub_final_assignment
+        self.declare_sub_final_assignment()
 
         # self.decalre_pub_zone_status()
 
