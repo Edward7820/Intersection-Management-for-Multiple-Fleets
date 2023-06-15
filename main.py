@@ -35,10 +35,19 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
                     continue
                 waiting = False
 
+        if myvehicle.finish_cross:
+            break
+
         myvehicle.pub_state()
         if vid == 0:
             if not myvehicle.schedule_group_consensus():
                 myvehicle.pub_schedule_map()
+            else:
+                assert myvehicle.all_states_received()
+                myvehicle.propose(1000, 1.2)
+                print(f"Fleet {lane_id}-{fid} proposed time slot assignment:")
+                print(myvehicle.proposal)
+                myvehicle.pub_propose()
 
         # time.sleep(5)
         # print(cur_round, args.delta_t)

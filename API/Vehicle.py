@@ -125,6 +125,7 @@ class Leader(MyVehicle):
         self.intersection_occupied = False
         #==================================#
         self.proposal = None
+        self.other_proposal = dict()
         self.final_assignment = None
 
         self.declare_pub_schedule_map()
@@ -233,7 +234,7 @@ class Leader(MyVehicle):
         self.pub_propose.put(pub_content)
 
     def declare_sub_propose(self):
-        self.other_proposal = dict()
+        # self.other_proposal = dict()
         def listener(sample: Sample):
             receive = sample.payload.decode('utf-8').split(':')
             lane_id = int(receive[0].split(',')[0])
@@ -247,7 +248,10 @@ class Leader(MyVehicle):
                 self.other_proposal[(lane_id,fleet_id)][veh] = deadlines
                 
         key = "proposal/**"
-        sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())                
+        sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
+
+    def all_proposal_received(self):
+        pass
 
     def declare_pub_score(self):
         key = f"score/{self.lane_id}/{self.fleet_id}"
@@ -276,7 +280,7 @@ class Leader(MyVehicle):
                 if (lane_id, fleet_id) not in self.all_score:
                     self.all_score[(lane_id, fleet_id)] = score
                 else:
-                    self.all_socre[(lane_id, fleet_id)] += score
+                    self.all_score[(lane_id, fleet_id)] += score
             
         key = "score/**"
         sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
