@@ -67,14 +67,14 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
                 if myvehicle.all_score_received():
                     print(f"Fleet {lane_id}-{fid} received all score!")
                     myvehicle.get_final_assignment()
+                    print(f"Final assignment for Fleet {lane_id}-{fid}: {myvehicle.final_assignment}")
                     phase = RUNNING
             elif phase == RUNNING:
                 ## TODO
                 pass
 
 
-        # time.sleep(5)
-        # print(cur_round, args.delta_t)
+        time.sleep(0.5)
         cur_round += 1
 
 

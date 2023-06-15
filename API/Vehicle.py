@@ -33,11 +33,14 @@ class MyVehicle():
         self.state_record = [None]*16
         self.finish = False # pass the intersection or not
         self.zone_idx_list = get_conflict_zone_idx(self.lane_id, self.des_lane_id)
+        self.assignment = dict()
 
         self.declare_pub_state()
         self.declare_sub_state()
 
-        self.decalre_pub_zone_status()
+        self.declare_sub_final_assignment
+
+        # self.decalre_pub_zone_status()
 
     def declare_pub_state(self):
         key = f"state/{self.lane_id}/{self.fleet_id}/{self.vehicle_id}"
@@ -72,9 +75,21 @@ class MyVehicle():
 
         key = f"state/{self.lane_id}/{self.fleet_id}/**"
         sub_state = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
+
+    def declare_sub_final_assignment(self):
+        def listener(sample: Sample):
+            receive = sample.payload.decode('utf-8').split(';')[:(-1)]
+            for r in receive:
+                r = r.split(',')
+                veh = (int(r[0]),int(r[1]),int(r[2]))
+                deadlines = [float(r[3]),float(r[4]),float(r[5]),float(r[6])]
+                self.assignment[veh] = deadlines
+        
+        key = f"final/{self.lane_id}/{self.fleet_id}"
+        sub_final_assignment = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
         
 
-    def decalre_pub_zone_status(self):
+    '''def decalre_pub_zone_status(self):
         key = "zone"
         self.pub_zone_status = self.session.declare_publisher(key)
     
@@ -85,7 +100,7 @@ class MyVehicle():
             buf = "free"
         # print(f"Putting Data ('{key}': '{buf}')...")
         
-        self.pub_zone_status.put(buf)
+        self.pub_zone_status.put(buf)'''
 
     def finish_cross(self) -> bool:
         ## judge whether the vehicle has crossed the intersection
@@ -140,6 +155,8 @@ class Leader(MyVehicle):
 
         self.declare_pub_score()
         self.declare_sub_score()
+
+        self.declare_pub_final_assignment()
 
     def declare_pub_schedule_map(self):
         key = f"map/{self.lane_id}"
@@ -327,12 +344,25 @@ class Leader(MyVehicle):
             elif final_score[(lane_id,fleet_id)] == max_score and lane_id == proposer[0] and fleet_id < proposer[1]:
                 proposer = (lane_id,fleet_id)
         self.final_assignment = self.other_proposal[proposer]
+
+    def declare_pub_final_assignment(self):
+        key = f"final/{self.lane_id}/{self.fleet_id}"
+        self.pub_final_assignment = self.session.declare_publisher(key)
+
+    def pub_final_assignment(self):
+        key = f"final/{self.lane_id}/{self.fleet_id}"
+        pub_content = ""
+        for veh in self.final_assignment:
+            deadlines = self.final_assignment[veh]
+            assert len(veh) == 3 and len(deadlines) == 4
+            pub_content += f"{veh[0]},{veh[1]},{veh[2]},{deadlines[0]},{deadlines[1]},{deadlines[2]},{deadlines[3]};"    
+        self.pub_propose.put(pub_content)
                 
-    def declare_sub_zone_status(self, wait_time=5):
+    '''def declare_sub_zone_status(self, wait_time=5):
         def listener(sample: Sample):
             receive = sample.payload.decode('utf-8')
             if receive == "occupied":
                 self.intersection_occupied = True
 
         key = "zone"
-        self.sub_result = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())        
+        self.sub_result = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())'''      
