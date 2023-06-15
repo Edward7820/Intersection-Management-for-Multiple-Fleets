@@ -164,13 +164,13 @@ class Leader(MyVehicle):
         key = f"map/{self.lane_id}"
         pub_map = f"{self.lane_id}:"
         for fleet_info in self.schedule_map:
-            pub_map += str(self.lane_id)
+            pub_map += str(fleet_info[0])
             pub_map += ","
-            pub_map += str(self.des_lane_id)
+            pub_map += str(fleet_info[1])
             pub_map += ","
-            pub_map += str(self.fleet_id)
+            pub_map += str(fleet_info[2])
             pub_map += ","
-            pub_map += str(self.fleet_length)
+            pub_map += str(fleet_info[3])
             pub_map += ";"
         #print(f"Putting Data ('{key}': '{pub_map}')...")
         self.publisher_schedule_map.put(pub_map)
