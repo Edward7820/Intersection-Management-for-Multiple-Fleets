@@ -48,9 +48,8 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
         myvehicle.pub_state()
         if vid == 0:
             if phase == SCHEDULE_GROUP_FORMING:
-                if not myvehicle.schedule_group_consensus():
-                    myvehicle.pub_schedule_map()
-                else:
+                myvehicle.pub_schedule_map()
+                if myvehicle.schedule_group_consensus():
                     assert myvehicle.all_states_received()
                     phase = COLLECT_PROPOSALS
             elif phase == COLLECT_PROPOSALS:
@@ -63,6 +62,13 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
                     phase = COLLECT_SCORES
             elif phase == COLLECT_SCORES:
                 myvehicle.pub_score()
+                if myvehicle.all_score_received():
+                    print(f"Fleet {lane_id}-{fid} received all score!")
+                    myvehicle.get_final_assignment()
+                    phase = RUNNING
+            elif phase == RUNNING:
+                ## TODO
+                pass
 
 
         # time.sleep(5)
