@@ -50,6 +50,8 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
             if phase == SCHEDULE_GROUP_FORMING:
                 myvehicle.pub_schedule_map()
                 if myvehicle.schedule_group_consensus():
+                    print(f"Fleet {lane_id}-{fid} got final schedule group:")
+                    print(myvehicle.schedule_map)
                     assert myvehicle.all_states_received()
                     phase = COLLECT_PROPOSALS
             elif phase == COLLECT_PROPOSALS:
