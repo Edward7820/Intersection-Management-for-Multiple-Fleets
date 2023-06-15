@@ -243,8 +243,23 @@ class Leader(MyVehicle):
         self.pub_score.put(pub_content)
 
     def declare_sub_score(self):
-        raise NotImplementedError
-        ## TODO
+        self.all_score = None
+        # self.all_score[(self.lane_id,self.fleet_id)] = self.scoring(self.proposal)
+        def listener(sample: Sample):
+            receive = sample.payload.decode('utf-8').split(':')
+            rec_scores = receive[1].split(';')[:(-1)]
+            for rec in rec_scores:
+                rec = rec.split(',')
+                lane_id = int(rec[0])
+                fleet_id = int(rec[1])
+                score = float(rec[2])
+                if (lane_id, fleet_id) not in self.all_score:
+                    self.all_score[(lane_id, fleet_id)] = score
+                else:
+                    self.all_socre[(lane_id, fleet_id)] += score
+            
+        key = "score/**"
+        sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
     
     def schedule_group_consensus(self):
         return self.agree[0] and self.agree[1] and self.agree[2] and self.agree[3]
