@@ -42,7 +42,7 @@ class MyVehicle():
 
     def declare_pub_state(self):
         key = f"state/{self.lane_id}/{self.fleet_id}/{self.vehicle_id}"
-        self.pub_state = self.session.declare_publisher(key)
+        self.publisher_state = self.session.declare_publisher(key)
 
     def pub_state(self):
         # key = f"state/{self.lane_id}/{self.fleet_id}/{self.vehicle_id}"
@@ -52,7 +52,7 @@ class MyVehicle():
         f"{self.velocity[0]},{self.velocity[1]}," + \
         f"{self.acceleration[0]},{self.acceleration[1]},{self.des_lane_id},{x}"
         # print(f"Putting Data ('{key}': '{state}')...")
-        self.pub_state.put(state)
+        self.publisher_state.put(state)
 
     def declare_sub_state(self):
         def listener(sample: Sample):
@@ -158,7 +158,7 @@ class Leader(MyVehicle):
 
     def declare_pub_schedule_map(self):
         key = f"map/{self.lane_id}"
-        self.pub_schedule_map = self.session.declare_publisher(key)
+        self.publisher_schedule_map = self.session.declare_publisher(key)
 
     def pub_schedule_map(self):
         key = f"map/{self.lane_id}"
@@ -173,7 +173,7 @@ class Leader(MyVehicle):
             pub_map += str(self.fleet_length)
             pub_map += ";"
         # print(f"Putting Data ('{key}': '{state}')...")
-        self.pub_schedule_map.put(pub_map)
+        self.publisher_schedule_map.put(pub_map)
 
     def declare_sub_schedule_map(self):
         def listener(sample: Sample):
@@ -237,7 +237,7 @@ class Leader(MyVehicle):
 
     def declare_pub_propose(self):
         key = f"proposal/{self.lane_id}/{self.fleet_id}"
-        self.pub_propose = self.session.declare_publisher(key)
+        self.publisher_propose = self.session.declare_publisher(key)
 
     def pub_propose(self):
         key = f"proposal/{self.lane_id}/{self.fleet_id}"
@@ -247,7 +247,7 @@ class Leader(MyVehicle):
             assert len(veh) == 3 and len(deadlines) == 4
             pub_content += f"{veh[0]},{veh[1]},{veh[2]},{deadlines[0]},{deadlines[1]},{deadlines[2]},{deadlines[3]};"
         
-        self.pub_propose.put(pub_content)
+        self.publisher_propose.put(pub_content)
 
     def declare_sub_propose(self):
         # self.other_proposal = dict()
@@ -288,7 +288,7 @@ class Leader(MyVehicle):
 
     def declare_pub_score(self):
         key = f"score/{self.lane_id}/{self.fleet_id}"
-        self.pub_score = self.session.declare_publisher(key)
+        self.publisher_score = self.session.declare_publisher(key)
     
     def pub_score(self):
         key = f"score/{self.lane_id}/{self.fleet_id}"
@@ -298,7 +298,7 @@ class Leader(MyVehicle):
             pub_content += f"{lane_id},{fleet_id},{score};"
         score = self.scoring(self.proposal)
         pub_content += f"{self.lane_id},{self.fleet_id},{score};"
-        self.pub_score.put(pub_content)
+        self.publisher_score.put(pub_content)
 
     def declare_sub_score(self):
         def listener(sample: Sample):
@@ -345,7 +345,7 @@ class Leader(MyVehicle):
 
     def declare_pub_final_assignment(self):
         key = f"final/{self.lane_id}/{self.fleet_id}"
-        self.pub_final_assignment = self.session.declare_publisher(key)
+        self.publisher_final_assignment = self.session.declare_publisher(key)
 
     def pub_final_assignment(self):
         key = f"final/{self.lane_id}/{self.fleet_id}"
@@ -354,7 +354,7 @@ class Leader(MyVehicle):
             deadlines = self.final_assignment[veh]
             assert len(veh) == 3 and len(deadlines) == 4
             pub_content += f"{veh[0]},{veh[1]},{veh[2]},{deadlines[0]},{deadlines[1]},{deadlines[2]},{deadlines[3]};"    
-        self.pub_propose.put(pub_content)
+        self.publisher_propose.put(pub_content)
                 
     '''def declare_sub_zone_status(self, wait_time=5):
         def listener(sample: Sample):
