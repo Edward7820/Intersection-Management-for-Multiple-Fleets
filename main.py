@@ -70,11 +70,12 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
                         myvehicle.get_final_assignment()
                         print(f"Final assignment for Fleet {lane_id}-{fid}: {myvehicle.final_assignment}")
                         phase = RUNNING
-
             else:
                 if len(myvehicle.assignment) > 0:
                     phase = RUNNING
-
+        else:
+            ## TODO
+            pass
 
         time.sleep(0.5)
         cur_round += 1

@@ -33,7 +33,7 @@ class MyVehicle():
         self.state_record = [None]*16
         self.finish = False # pass the intersection or not
         self.zone_idx_list = get_conflict_zone_idx(self.lane_id, self.des_lane_id)
-        self.assignment = dict()
+        self.final_assignment = dict()
 
         self.declare_pub_state()
         self.declare_sub_state()
@@ -83,7 +83,7 @@ class MyVehicle():
                 r = r.split(',')
                 veh = (int(r[0]),int(r[1]),int(r[2]))
                 deadlines = [float(r[3]),float(r[4]),float(r[5]),float(r[6])]
-                self.assignment[veh] = deadlines
+                self.final_assignment[veh] = deadlines
         
         key = f"final/{self.lane_id}/{self.fleet_id}"
         sub_final_assignment = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
