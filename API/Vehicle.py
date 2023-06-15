@@ -9,7 +9,7 @@ from zenoh import config
 from datetime import datetime
 from zenoh import Reliability, Sample, session
 from . import math_utils
-from math_utils import euclidean_dist, get_conflict_zone_idx, get_min_arrival_time
+from math_utils import euclidean_dist, get_conflict_zone_idx, get_min_arrival_time, vector_length
 from . import Scheduler
 from . import Simulator
 from typing import List, Tuple
@@ -115,8 +115,7 @@ class Leader(MyVehicle):
     acceleration: Tuple, vehicle_id: int, fleet_id: int, lane_id: int, delta:float,
     des_lane_id: int, fleet_length: int):
         super().__init__(session, velocity, location, acceleration, vehicle_id, 
-        fleet_id, lane_id, delta)
-        self.des_lane_id = des_lane_id
+        fleet_id, lane_id, des_lane_id, delta)
         self.fleet_length = fleet_length
         self.schedule_map = set()
         self.schedule_map.add((self.lane_id, self.des_lane_id, self.fleet_id))
@@ -215,11 +214,46 @@ class Leader(MyVehicle):
         self.pub_propose.put(pub_content)
 
     def declare_sub_propose(self):
+        self.other_proposal = dict()
+        def listener(sample: Sample):
+            receive = sample.payload.decode('utf-8').split(':')
+            lane_id = int(receive[0].split(',')[0])
+            fleet_id = int(receive[0].split(',')[1])
+            rec_proposal = receive[1].split(';')
+            for s in rec_proposal[:(-1)]:
+                s = s.split(',')
+                veh = (int(s[0]),int(s[1]),int(s[2]))
+                deadlines = [float(s[3]),float(s[4]),float(s[5]),float(s[6])]
+                
+
+    def declare_pub_score(self):
+        key = f"score/{self.lane_id}/{self.fleet_id}"
+        self.pub_score = self.session.declare_publisher(key)
+    
+    def pub_score(self):
+        key = f"score/{self.lane_id}/{self.fleet_id}"
+        pub_content = f"{self.lane_id},{self.fleet_id}:"
         ## TODO
-        pass
+
+    def declare_sub_score(self):
+        raise NotImplementedError
+        ## TODO
     
     def schedule_group_consensus(self):
         return self.agree[0] and self.agree[1] and self.agree[2] and self.agree[3]
+    
+    def scoring(self, time_slot):
+        total_delay = 0
+        for (lane_id, fleet_id, veh_id) in time_slot:
+            if lane_id == self.lane_id and fleet_id == self.fleet_id:
+                velocity = self.fleets_state_record[(lane_id, fleet_id, veh_id)]['velocity']
+                speed = vector_length(velocity[0], velocity[1])
+                location = self.fleets_state_record[(lane_id, fleet_id, veh_id)]['location']
+                des_lane_id = self.fleets_state_record[(lane_id, fleet_id, veh_id)]['des_lane_id']
+                t_min = get_min_arrival_time(CONFLICT_ZONES,lane_id,des_lane_id,location,speed)
+                total_delay += (time_slot[(lane_id, fleet_id, veh_id)] - t_min)
+        return -total_delay/self.fleet_length
+
 
     '''
     def propose(self, schedule_granularity=1.0): 
