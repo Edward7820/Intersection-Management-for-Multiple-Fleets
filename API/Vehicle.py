@@ -219,12 +219,16 @@ class Leader(MyVehicle):
             receive = sample.payload.decode('utf-8').split(':')
             lane_id = int(receive[0].split(',')[0])
             fleet_id = int(receive[0].split(',')[1])
+            self.other_proposal[(lane_id, fleet_id)] = dict()
             rec_proposal = receive[1].split(';')
             for s in rec_proposal[:(-1)]:
                 s = s.split(',')
                 veh = (int(s[0]),int(s[1]),int(s[2]))
                 deadlines = [float(s[3]),float(s[4]),float(s[5]),float(s[6])]
+                self.other_proposal[(lane_id,fleet_id)][veh] = deadlines
                 
+        key = "proposal/**"
+        sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())                
 
     def declare_pub_score(self):
         key = f"score/{self.lane_id}/{self.fleet_id}"
