@@ -40,7 +40,7 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
         while waiting:
             if all([r>=cur_round for r in rounds]):
                 waiting = False
-                time.sleep(0.5)
+                time.sleep(3)
 
         if myvehicle.finish_cross():
             break
@@ -49,11 +49,14 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
         if phase != RUNNING:
             if vid == 0:
                 if phase == SCHEDULE_GROUP_FORMING:
-                    print(myvehicle.schedule_map)
+                    # print(myvehicle.schedule_map)
                     myvehicle.pub_schedule_map()
                     if myvehicle.schedule_group_consensus():
                         print(f"Fleet {lane_id}-{fid} got final schedule group: {myvehicle.schedule_map}")
-                        assert myvehicle.all_states_received()
+                        phase = COLLECT_STATES
+                elif phase == COLLECT_STATES:
+                    if myvehicle.all_states_received():
+                        print(f"Fleet {lane_id}-{fid} got all states!")
                         phase = COLLECT_PROPOSALS
                 elif phase == COLLECT_PROPOSALS:
                     myvehicle.propose(1000, 1.2)
@@ -72,12 +75,14 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
             else:
                 if len(myvehicle.final_assignment) > 0:
                     phase = RUNNING
+            # print(lane_id,fid,vid,cur_round)
         else:
             ## TODO
             pass
 
         # time.sleep(0.5)
         cur_round += 1
+        # print(lane_id,fid,vid,cur_round)
 
 
 def main():
