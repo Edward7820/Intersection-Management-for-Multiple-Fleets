@@ -72,7 +72,7 @@ class MyVehicle():
                 self.state_record[rec_vehicle_id] = state
 
         key = f"state/{self.lane_id}/{self.fleet_id}/**"
-        sub_state = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
+        self.subscriber_state = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
 
     def declare_sub_final_assignment(self):
         def listener(sample: Sample):
@@ -84,7 +84,7 @@ class MyVehicle():
                 self.final_assignment[veh] = deadlines
         
         key = f"final/{self.lane_id}/{self.fleet_id}"
-        sub_final_assignment = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
+        self.subscriber_final_assignment = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
         
 
     '''def decalre_pub_zone_status(self):
@@ -172,14 +172,14 @@ class Leader(MyVehicle):
             pub_map += ","
             pub_map += str(fleet_info[3])
             pub_map += ";"
-        #print(f"Putting Data ('{key}': '{pub_map}')...")
+        # print(f"Putting Data ('{key}': '{pub_map}')...")
         self.publisher_schedule_map.put(pub_map)
 
     def declare_sub_schedule_map(self):
         def listener(sample: Sample):
             rcv_schedule_map = set()
             receive = sample.payload.decode('utf-8').split(":")
-            #print(receive)
+            # print(receive)
             rec_lane_id = int(receive[0])
             rec_fleet_info = receive[1].split(";")[:(-1)]
             for rec_fleet in rec_fleet_info:
@@ -190,8 +190,8 @@ class Leader(MyVehicle):
             else:
                 self.schedule_map = self.schedule_map.union(rcv_schedule_map)
 
-        key = "map/**"
-        sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
+        key = f"map/**"
+        self.subscriber_schedule_map = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
 
     def schedule_group_consensus(self):
         return self.agree[0] and self.agree[1] and self.agree[2] and self.agree[3]
@@ -215,7 +215,7 @@ class Leader(MyVehicle):
                 self.fleets_state_record[(rec_lane_id,rec_fleet_id,rec_vehicle_id)] = state
 
         key = f"state/**"
-        sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
+        self.subscriber_state = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
 
     def all_states_received(self):
         for k in list(self.schedule_map.keys):
@@ -265,7 +265,7 @@ class Leader(MyVehicle):
                 self.all_proposal[(lane_id,fleet_id)][veh] = deadlines
                 
         key = "proposal/**"
-        sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
+        self.subscriber_proposal = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
 
     def all_proposal_received(self):
         for (lane_id,des_lane_id,fleet_id,fleet_len) in self.schedule_map:
@@ -312,7 +312,7 @@ class Leader(MyVehicle):
                 self.all_score[(lane_id,fleet_id,sender_lane_id,sender_fleet_id)] = score
             
         key = "score/**"
-        sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
+        self.subscriber_score = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
 
     def all_score_received(self):
         for (lane_id,_,fleet_id,_) in self.schedule_map:
