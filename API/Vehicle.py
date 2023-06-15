@@ -184,7 +184,7 @@ class Leader(MyVehicle):
             rec_fleet_id = int(receive[1])
             rec_vehicle_id = int(receive[2])
             rec_finish = int(receive[10])
-            if rec_finish==0:
+            if rec_finish == 0:
                 self.fleets_state_record[(rec_lane_id,rec_fleet_id,rec_vehicle_id)] = state
 
         key = f"state/**"
@@ -237,7 +237,10 @@ class Leader(MyVehicle):
     def pub_score(self):
         key = f"score/{self.lane_id}/{self.fleet_id}"
         pub_content = f"{self.lane_id},{self.fleet_id}:"
-        ## TODO
+        for (lane_id, fleet_id) in self.other_proposal:
+            score = self.scoring(self.other_proposal[(lane_id, fleet_id)])
+            pub_content += f"{lane_id},{fleet_id},{score};"
+        self.pub_score.put(pub_content)
 
     def declare_sub_score(self):
         raise NotImplementedError
