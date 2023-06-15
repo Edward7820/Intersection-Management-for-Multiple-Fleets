@@ -276,8 +276,21 @@ class Leader(MyVehicle):
                 t_min = get_min_arrival_time(CONFLICT_ZONES,lane_id,des_lane_id,location,speed)
                 total_delay += (time_slot[(lane_id, fleet_id, veh_id)] - t_min)
         return -total_delay/self.fleet_length
-
-
+    
+    def get_final_assignment(self):
+        max_score = float("-inf")
+        proposer = None
+        for (lane_id, fleet_id) in self.all_score:
+            if self.all_score[(lane_id,fleet_id)] > max_score:
+                max_score = self.all_score[(lane_id,fleet_id)]
+                proposer = (lane_id,fleet_id)
+            elif self.all_score[(lane_id,fleet_id)] == max_score and lane_id < proposer[0]:
+                proposer = (lane_id,fleet_id)
+            elif self.all_score[(lane_id,fleet_id)] == max_score and lane_id == proposer[0] and fleet_id < proposer[1]:
+                proposer = (lane_id,fleet_id)
+        self.final_assignment = self.other_proposal[proposer]
+                
+                
     '''
     def propose(self, schedule_granularity=1.0): 
         # consider state of all vehicles, return: a, b
