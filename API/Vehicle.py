@@ -199,6 +199,16 @@ class Leader(MyVehicle):
         key = f"state/**"
         sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
 
+    def all_states_received(self):
+        for k in list(self.schedule_map.keys):
+            fleet_size = k[3]
+            lane_id = k[0]
+            fleet_id = k[2]
+            for i in range(fleet_size):
+                if (lane_id,fleet_id,i) not in self.fleets_state_record:
+                    return False 
+        return True
+
     def propose(self, num_iter, alpha):
         ## propose a schedule based on the states of other vehicles
         scheduler = Scheduler.Scheduler(CONFLICT_ZONES,self.fleets_state_record,1.5,self.lane_id,self.fleet_id,alpha)
