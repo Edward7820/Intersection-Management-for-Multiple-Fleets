@@ -126,6 +126,7 @@ class Leader(MyVehicle):
         #==================================#
         self.proposal = None
         self.other_proposal = dict()
+        self.all_score = dict()
         self.final_assignment = None
 
         self.declare_pub_schedule_map()
@@ -251,7 +252,24 @@ class Leader(MyVehicle):
         sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
 
     def all_proposal_received(self):
-        pass
+        for (lane_id,des_lane_id,fleet_id,fleet_len) in self.schedule_map:
+            if lane_id == self.lane_id and fleet_id == self.fleet_id:
+                continue
+            if (lane_id,fleet_id) not in self.other_proposal:
+                return False
+        return True
+    
+    def scoring(self, time_slot):
+        total_delay = 0
+        for (lane_id, fleet_id, veh_id) in time_slot:
+            if lane_id == self.lane_id and fleet_id == self.fleet_id:
+                velocity = self.fleets_state_record[(lane_id, fleet_id, veh_id)]['velocity']
+                speed = vector_length(velocity[0], velocity[1])
+                location = self.fleets_state_record[(lane_id, fleet_id, veh_id)]['location']
+                des_lane_id = self.fleets_state_record[(lane_id, fleet_id, veh_id)]['des_lane_id']
+                t_min = get_min_arrival_time(CONFLICT_ZONES,lane_id,des_lane_id,location,speed)
+                total_delay += (time_slot[(lane_id, fleet_id, veh_id)] - t_min)
+        return -total_delay/self.fleet_length
 
     def declare_pub_score(self):
         key = f"score/{self.lane_id}/{self.fleet_id}"
@@ -268,45 +286,45 @@ class Leader(MyVehicle):
         self.pub_score.put(pub_content)
 
     def declare_sub_score(self):
-        self.all_score = None
         def listener(sample: Sample):
             receive = sample.payload.decode('utf-8').split(':')
             rec_scores = receive[1].split(';')[:(-1)]
+            sender_info = receive[0].split(',')
+            sender_lane_id = int(sender_info[0])
+            sender_fleet_id = int(sender_info[1])
             for rec in rec_scores:
                 rec = rec.split(',')
                 lane_id = int(rec[0])
                 fleet_id = int(rec[1])
                 score = float(rec[2])
-                if (lane_id, fleet_id) not in self.all_score:
-                    self.all_score[(lane_id, fleet_id)] = score
-                else:
-                    self.all_score[(lane_id, fleet_id)] += score
+                self.all_score[(lane_id,fleet_id,sender_lane_id,sender_fleet_id)] = score
             
         key = "score/**"
         sub = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
-    
-    def scoring(self, time_slot):
-        total_delay = 0
-        for (lane_id, fleet_id, veh_id) in time_slot:
-            if lane_id == self.lane_id and fleet_id == self.fleet_id:
-                velocity = self.fleets_state_record[(lane_id, fleet_id, veh_id)]['velocity']
-                speed = vector_length(velocity[0], velocity[1])
-                location = self.fleets_state_record[(lane_id, fleet_id, veh_id)]['location']
-                des_lane_id = self.fleets_state_record[(lane_id, fleet_id, veh_id)]['des_lane_id']
-                t_min = get_min_arrival_time(CONFLICT_ZONES,lane_id,des_lane_id,location,speed)
-                total_delay += (time_slot[(lane_id, fleet_id, veh_id)] - t_min)
-        return -total_delay/self.fleet_length
+
+    def all_score_received(self):
+        for (lane_id,_,fleet_id,_) in self.schedule_map:
+            for (sender_lane_id,_,sender_fleet_id,_) in self.schedule_map:
+                if (lane_id,fleet_id,sender_lane_id,sender_fleet_id) not in self.all_score:
+                    return False
+        return True
     
     def get_final_assignment(self):
+        final_score = dict()
+        for (lane_id,fleet_id,sender_lane_id,sender_fleet_id) in self.all_score:
+            if (lane_id,fleet_id) not in final_score:
+                final_score[(lane_id,fleet_id)] = self.all_score[(lane_id,fleet_id,sender_lane_id,sender_fleet_id)]
+            else:
+                final_score[(lane_id,fleet_id)] += self.all_score[(lane_id,fleet_id,sender_lane_id,sender_fleet_id)]
         max_score = float("-inf")
         proposer = None
-        for (lane_id, fleet_id) in self.all_score:
-            if self.all_score[(lane_id,fleet_id)] > max_score:
-                max_score = self.all_score[(lane_id,fleet_id)]
+        for (lane_id, fleet_id) in final_score:
+            if final_score[(lane_id,fleet_id)] > max_score:
+                max_score = final_score[(lane_id,fleet_id)]
                 proposer = (lane_id,fleet_id)
-            elif self.all_score[(lane_id,fleet_id)] == max_score and lane_id < proposer[0]:
+            elif final_score[(lane_id,fleet_id)] == max_score and lane_id < proposer[0]:
                 proposer = (lane_id,fleet_id)
-            elif self.all_score[(lane_id,fleet_id)] == max_score and lane_id == proposer[0] and fleet_id < proposer[1]:
+            elif final_score[(lane_id,fleet_id)] == max_score and lane_id == proposer[0] and fleet_id < proposer[1]:
                 proposer = (lane_id,fleet_id)
         self.final_assignment = self.other_proposal[proposer]
                 

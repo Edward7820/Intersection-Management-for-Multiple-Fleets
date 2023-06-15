@@ -11,6 +11,12 @@ from multiprocessing import Process, Array
 from typing import List, Dict, Tuple
 MAX_VEH_NUM = 100
 
+SCHEDULE_GROUP_FORMING = 0
+COLLECT_STATES = 1
+COLLECT_PROPOSALS = 2
+COLLECT_SCORES = 3
+RUNNING = 4
+
 def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int, 
     fleet_len: int,  vid: int, location: tuple, velocity: tuple, 
     acceleration: tuple, rounds):
@@ -24,6 +30,7 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
         myvehicle = MyVehicle(session, velocity, location, acceleration,
                                vid, fid, lane_id, des_lane_id, delta_t)
     cur_round = 1
+    phase = SCHEDULE_GROUP_FORMING
     while(True):
         rounds[pid] = cur_round
 
@@ -40,14 +47,23 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
 
         myvehicle.pub_state()
         if vid == 0:
-            if not myvehicle.schedule_group_consensus():
-                myvehicle.pub_schedule_map()
-            else:
-                assert myvehicle.all_states_received()
+            if phase == SCHEDULE_GROUP_FORMING:
+                if not myvehicle.schedule_group_consensus():
+                    myvehicle.pub_schedule_map()
+                else:
+                    assert myvehicle.all_states_received()
+                    phase = COLLECT_PROPOSALS
+            elif phase == COLLECT_PROPOSALS:
                 myvehicle.propose(1000, 1.2)
                 print(f"Fleet {lane_id}-{fid} proposed time slot assignment:")
                 print(myvehicle.proposal)
                 myvehicle.pub_propose()
+                if myvehicle.all_proposal_received():
+                    print(f"Fleet {lane_id}-{fid} received all proposals!")
+                    phase = COLLECT_SCORES
+            elif phase == COLLECT_SCORES:
+                myvehicle.pub_score()
+
 
         # time.sleep(5)
         # print(cur_round, args.delta_t)
