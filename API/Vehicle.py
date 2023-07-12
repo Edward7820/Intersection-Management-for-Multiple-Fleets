@@ -45,7 +45,7 @@ class MyVehicle():
         self.publisher_state = self.session.declare_publisher(key)
 
     def pub_state(self):
-        # key = f"state/{self.lane_id}/{self.fleet_id}/{self.vehicle_id}"
+        key = f"state/{self.lane_id}/{self.fleet_id}/{self.vehicle_id}"
         x = 1 if self.finish else 0
         state = f"{self.lane_id},{self.fleet_id},{self.vehicle_id}," + \
         f"{self.location[0]},{self.location[1]}," + \
@@ -218,7 +218,7 @@ class Leader(MyVehicle):
         self.subscriber_state = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
 
     def all_states_received(self):
-        for k in list(self.schedule_map.keys):
+        for k in self.schedule_map:
             fleet_size = k[3]
             lane_id = k[0]
             fleet_id = k[2]

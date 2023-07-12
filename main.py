@@ -20,7 +20,8 @@ RUNNING = 4
 def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int, 
     fleet_len: int,  vid: int, location: tuple, velocity: tuple, 
     acceleration: tuple, rounds):
-    # print(f"start running vehicle {lane_id}-{fid}-{vid}")
+    print(f"start running vehicle {lane_id}-{fid}-{vid} (pid: {pid})")
+    # print(veh_num, pid, des_lane_id, fleet_len, location, velocity, acceleration)
     delta_t = args.delta_t
     session = zenoh.open()
     if vid == 0:
@@ -38,18 +39,26 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
         ## wait for other processes
         waiting = True
         while waiting:
+            # print(f"lane_id: {lane_id}, fid: {fid}, vid: {vid} (pid: {pid}), rounds: {list(rounds)}")
             if all([r>=cur_round for r in rounds]):
                 waiting = False
-                time.sleep(3)
+            else:
+                time.sleep(1)
+
+        # print(f"lane_id: {lane_id}, fid: {fid}, vid: {vid} (pid: {pid}), current round: {cur_round}, phase: {phase}")
 
         if myvehicle.finish_cross():
-            break
+            print(f"vehicle {lane_id}-{fid}-{vid} (pid: {pid}) has crossed the intersection.")
+            cur_round += 1
+            continue
+
+        # print(f"lane_id: {lane_id}, fid: {fid}, vid: {vid} (pid: {pid}), current round: {cur_round}, phase: {phase}")
 
         myvehicle.pub_state()
         if phase != RUNNING:
             if vid == 0:
                 if phase == SCHEDULE_GROUP_FORMING:
-                    # print(myvehicle.schedule_map)
+                    print(pid, myvehicle.schedule_map)
                     myvehicle.pub_schedule_map()
                     if myvehicle.schedule_group_consensus():
                         print(f"Fleet {lane_id}-{fid} got final schedule group: {myvehicle.schedule_map}")
@@ -75,14 +84,13 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
             else:
                 if len(myvehicle.final_assignment) > 0:
                     phase = RUNNING
-            # print(lane_id,fid,vid,cur_round)
         else:
             ## TODO
             pass
 
         # time.sleep(0.5)
+        print(f"Vehicle {lane_id}-{fid}-{vid} (pid: {pid}) finished round {cur_round}")
         cur_round += 1
-        # print(lane_id,fid,vid,cur_round)
 
 
 def main():
@@ -139,8 +147,14 @@ def main():
     assert(len(veh_processes) == veh_num)
 
     while True:
-        for proc in veh_processes:
-            proc.join(timeout=2)
+        try:
+            for proc in veh_processes:
+                proc.join(timeout=2)
+        except KeyboardInterrupt:
+            for proc in veh_processes:
+                proc.terminate()
+                proc.join()
+
 
 if __name__ == '__main__':
     main()
