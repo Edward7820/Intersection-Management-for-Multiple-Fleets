@@ -229,7 +229,7 @@ class Leader(MyVehicle):
 
     def propose(self, num_iter, alpha):
         ## propose a schedule based on the states of other vehicles
-        scheduler = Scheduler.Scheduler(CONFLICT_ZONES,self.fleets_state_record,1.5,self.lane_id,self.fleet_id,alpha)
+        scheduler = Scheduler(CONFLICT_ZONES,self.fleets_state_record,1.5,self.lane_id,self.fleet_id,alpha)
         passing_order = scheduler.search(num_iter)
         time_slot = scheduler.passing_order_to_time_slot(passing_order)
         self.proposal = time_slot
