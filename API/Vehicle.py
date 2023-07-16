@@ -14,7 +14,6 @@ from typing import List, Tuple
 from .Scheduler import Scheduler
 CONFLICT_ZONES = [(0,0,4,4),(-4,0,0,4),(-4,-4,0,0),(0,-4,4,0)]
 
-
 class MyVehicle():
     def __init__(self, session, velocity: Tuple, location: Tuple, 
     acceleration: Tuple, vehicle_id: int, fleet_id: int, lane_id: int, 
@@ -28,17 +27,7 @@ class MyVehicle():
         self.lane_id = lane_id
         self.des_lane_id = des_lane_id
         self.delta = delta
-        self.state_record = [None]*16
         self.finish = False # pass the intersection or not
-        self.zone_idx_list = get_conflict_zone_idx(self.lane_id, self.des_lane_id)
-        self.final_assignment = dict()
-
-        self.declare_pub_state()
-        self.declare_sub_state()
-
-        self.declare_sub_final_assignment()
-
-        # self.decalre_pub_zone_status()
 
     def declare_pub_state(self):
         key = f"state/{self.lane_id}/{self.fleet_id}/{self.vehicle_id}"
@@ -51,8 +40,56 @@ class MyVehicle():
         f"{self.location[0]},{self.location[1]}," + \
         f"{self.velocity[0]},{self.velocity[1]}," + \
         f"{self.acceleration[0]},{self.acceleration[1]},{self.des_lane_id},{x}"
-        # print(f"Putting Data ('{key}': '{state}')...")
+        # print(f"About to put Data ('{key}': '{state}')...")
         self.publisher_state.put(state)
+        # print(f"Putting Data ('{key}': '{state}')...")
+
+    def declare_sub_state(self):
+        pass
+
+    def finish_cross(self) -> bool:
+        ## judge whether the vehicle has crossed the intersection
+        if self.des_lane_id == 0:
+            if self.location[0] >= 4:
+                return True
+            else:
+                return False
+        elif self.des_lane_id == 1:
+            if self.location[1] >= 4:
+                return True
+            else:
+                return False
+        elif self.des_lane_id == 2:
+            if self.location[0] <= -4:
+                return True
+            else:
+                return False
+        else:
+            if self.location[1] <= -4:
+                return True
+            else:
+                return False
+
+class Member(MyVehicle):
+    def __init__(self, session, velocity: Tuple, location: Tuple, 
+    acceleration: Tuple, vehicle_id: int, fleet_id: int, lane_id: int, 
+    des_lane_id: int, delta:float):
+        super().__init__(session, velocity, location, acceleration, vehicle_id, 
+        fleet_id, lane_id, des_lane_id, delta)
+        self.state_record = [None]*16
+        self.zone_idx_list = get_conflict_zone_idx(self.lane_id, self.des_lane_id)
+        self.final_assignment = dict()
+        # self.publisher_state = None
+        # self.subscriber_state = None
+        # self.subscriber_final_assignment = None
+
+        self.declare_pub_state()
+        self.declare_sub_state()
+
+        self.declare_sub_final_assignment()
+
+        # self.decalre_pub_zone_status()
+        print(f"initialize vehicle {self.lane_id}-{self.fleet_id}-{self.vehicle_id}")
 
     def declare_sub_state(self):
         def listener(sample: Sample):
@@ -100,29 +137,6 @@ class MyVehicle():
         
         self.pub_zone_status.put(buf)'''
 
-    def finish_cross(self) -> bool:
-        ## judge whether the vehicle has crossed the intersection
-        if self.des_lane_id == 0:
-            if self.location[0] >= 4:
-                return True
-            else:
-                return False
-        elif self.des_lane_id == 1:
-            if self.location[1] >= 4:
-                return True
-            else:
-                return False
-        elif self.des_lane_id == 2:
-            if self.location[0] <= -4:
-                return True
-            else:
-                return False
-        else:
-            if self.location[1] <= -4:
-                return True
-            else:
-                return False
-
 class Leader(MyVehicle):
     def __init__(self, session, velocity: Tuple[float], location: Tuple, 
     acceleration: Tuple, vehicle_id: int, fleet_id: int, lane_id: int, delta:float,
@@ -140,13 +154,23 @@ class Leader(MyVehicle):
         self.proposal = None
         self.all_proposal = dict()
         self.all_score = dict()
-        self.final_assignment = None
-
-        self.declare_pub_schedule_map()
-        self.declare_sub_schedule_map()
+        self.final_assignment = dict()
+        '''self.publisher_schedule_map = None
+        self.publisher_state = None
+        self.publisher_propose = None
+        self.publisher_score = None
+        self.publisher_final_assignment = None
+        self.subscriber_schedule_map = None
+        self.subscriber_state = None
+        self.subscriber_proposal = None
+        self.subscriber_final_assignment = None
+        self.subscriber_score = None'''
 
         self.declare_pub_state()
         self.declare_sub_state()
+
+        self.declare_pub_schedule_map()
+        self.declare_sub_schedule_map()
 
         self.declare_pub_propose()
         self.declare_sub_propose()
@@ -155,6 +179,7 @@ class Leader(MyVehicle):
         self.declare_sub_score()
 
         self.declare_pub_final_assignment()
+        print(f"initialize vehicle {self.lane_id}-{self.fleet_id}-{self.vehicle_id}")
 
     def declare_pub_schedule_map(self):
         key = f"map/{self.lane_id}"
@@ -352,6 +377,7 @@ class Leader(MyVehicle):
             assert len(veh) == 3 and len(deadlines) == 4
             pub_content += f"{veh[0]},{veh[1]},{veh[2]},{deadlines[0]},{deadlines[1]},{deadlines[2]},{deadlines[3]};"    
         self.publisher_propose.put(pub_content)
+
                 
     '''def declare_sub_zone_status(self, wait_time=5):
         def listener(sample: Sample):

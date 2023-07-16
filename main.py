@@ -5,7 +5,7 @@ import itertools
 import json
 import zenoh
 from datetime import datetime
-from API.Vehicle import MyVehicle, Leader
+from API.Vehicle import MyVehicle, Leader, Member
 import os, signal
 from multiprocessing import Process, Array
 from typing import List, Dict, Tuple
@@ -29,7 +29,7 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
         myvehicle = Leader(session, velocity, location, acceleration, vid, fid, lane_id,
                            delta_t, des_lane_id, fleet_len)
     else:
-        myvehicle = MyVehicle(session, velocity, location, acceleration,
+        myvehicle = Member(session, velocity, location, acceleration,
                                vid, fid, lane_id, des_lane_id, delta_t)
     cur_round = 1
     phase = SCHEDULE_GROUP_FORMING
@@ -54,6 +54,7 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
 
         # print(f"lane_id: {lane_id}, fid: {fid}, vid: {vid} (pid: {pid}), current round: {cur_round}, phase: {phase}")
 
+        # print(f"Vehicle {lane_id}-{fid}-{vid} (pid: {pid}) starts round {cur_round}")
         myvehicle.pub_state()
         if phase != RUNNING:
             if vid == 0:
@@ -88,7 +89,6 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
             ## TODO
             pass
 
-        # time.sleep(0.5)
         print(f"Vehicle {lane_id}-{fid}-{vid} (pid: {pid}) finished round {cur_round}")
         cur_round += 1
 
@@ -143,7 +143,9 @@ def main():
                 fleets[i]['fid'], fleets[i]['fleet_len'],
                 vid, (loc_x,loc_y), (vel_x,vel_y), (acc_x,acc_y), rounds))
             veh_processes.append(veh_proc)
-            veh_proc.start()
+
+    for veh_proc in veh_processes:
+        veh_proc.start()
     assert(len(veh_processes) == veh_num)
 
     while True:

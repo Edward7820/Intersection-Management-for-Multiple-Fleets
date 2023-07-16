@@ -176,7 +176,7 @@ class Scheduler():
             if node:
                 score = self.simulate(node)
                 node.backpropagate(score)
-            self.print_tree()
+            # self.print_tree()
         
         ## get best passing order
         node = self.root
