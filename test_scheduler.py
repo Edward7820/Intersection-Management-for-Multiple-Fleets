@@ -1,6 +1,8 @@
 from argparse import ArgumentParser
 from API.Scheduler import Scheduler
 from API.Simulator import simulate_passing_order
+import os
+import time
 
 def main():
     states = dict()
@@ -59,7 +61,7 @@ def main():
     print(passing_order)
     t_assign = scheduler.passing_order_to_time_slot(passing_order)
     print(t_assign)
-    
+    time.sleep(10)
 
 if __name__ == '__main__':
     main()

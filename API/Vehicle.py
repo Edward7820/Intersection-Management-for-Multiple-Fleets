@@ -307,7 +307,7 @@ class Leader(MyVehicle):
                 location = self.fleets_state_record[(lane_id, fleet_id, veh_id)]['location']
                 des_lane_id = self.fleets_state_record[(lane_id, fleet_id, veh_id)]['des_lane_id']
                 t_min = get_min_arrival_time(CONFLICT_ZONES,lane_id,des_lane_id,location,speed)
-                total_delay += (time_slot[(lane_id, fleet_id, veh_id)] - t_min)
+                total_delay += (max(time_slot[(lane_id, fleet_id, veh_id)]) - t_min)
         return -total_delay/self.fleet_length
 
     def declare_pub_score(self):
