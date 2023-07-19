@@ -19,6 +19,23 @@ def quadratic(a:float, b:float, c:float):
 def euclidean_dist(x1: Tuple[float], x2: Tuple[float]):
     return math.sqrt((x1[0]-x2[0])**2 + (x1[1]-x2[1])**2)
 
+def vector_add(x1: Tuple[float], x2: Tuple[float]):
+    return (x1[0]+x2[0], x1[1]+x2[1])
+
+def vector_mul_scalar(x: Tuple[float], c: float):
+    return (x[0]*c, x[1]*c)
+
+def vector_sub(x1: Tuple[float], x2: Tuple[float]):
+    return (x1[0]-x2[0], x1[1]-x2[1])
+
+def inner_product(x1: Tuple[float], x2: Tuple[float]):
+    return x1[0]*x2[0] + x1[1]*x2[1]
+
+def projection(x1: Tuple[float], x2: Tuple[float]):
+    # project x1 onto the direction of x2
+    scalar = inner_product(x1, x2)/vector_length(x2[0],x2[1])
+    return vector_mul_scalar(x2, scalar)
+
 def arrival_time(distance: float, speed: float, acceleration: float):
     t = quadratic(acceleration/2, speed, -distance)
     assert t != None

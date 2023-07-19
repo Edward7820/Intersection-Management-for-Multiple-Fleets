@@ -8,11 +8,12 @@ import math
 from zenoh import config
 from datetime import datetime
 from zenoh import Reliability, Sample, session
-from .math_utils import euclidean_dist, get_conflict_zone_idx, get_min_arrival_time, vector_length
+from .math_utils import *
 from . import Simulator
 from typing import List, Tuple
 from .Scheduler import Scheduler
 CONFLICT_ZONES = [(0,0,4,4),(-4,0,0,4),(-4,-4,0,0),(0,-4,4,0)]
+MAX_SPEED = 12
 
 class MyVehicle():
     def __init__(self, session, velocity: Tuple, location: Tuple, 
@@ -69,6 +70,23 @@ class MyVehicle():
                 return True
             else:
                 return False
+            
+    def step_vehicle(self):
+        ## update its own state
+        original_velocity = self.velocity.copy()
+        delta_v = vector_mul_scalar(self.acceleration, self.delta)
+        self.velocity = vector_add(original_velocity, delta_v)
+        if inner_product(original_velocity, self.velocity) < 0:
+            tangent_v = projection(self.velocity, original_velocity)
+            self.velocity = vector_sub(self.velocity, tangent_v)
+        speed = vector_length(self.velocity[0], self.velocity[1])
+        if speed > MAX_SPEED:
+            scalar = MAX_SPEED / speed
+            self.velocity = vector_mul_scalar(self.velocity, scalar)
+            speed = vector_length(self.velocity[0], self.velocity[1])
+        average_v = vector_mul_scalar(vector_add(self.velocity, original_velocity), 0.5)
+        displacement = vector_mul_scalar(average_v, self.delta)
+        self.location = vector_add(self.location, displacement)
 
 class Member(MyVehicle):
     def __init__(self, session, velocity: Tuple, location: Tuple, 
