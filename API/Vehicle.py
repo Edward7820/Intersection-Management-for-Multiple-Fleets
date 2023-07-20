@@ -183,10 +183,21 @@ class Member(MyVehicle):
                 waypoints[-3]["location"] = (2,0)
             elif self.des_lane_id == 3:
                 waypoints[-3]["location"] = (0,2)
+        return waypoints
     
     def update_acceleration(self):
-        ## TODO: waypoint pursuing
-        pass
+        ## waypoints pursuing
+        waypoints = self.get_waypoints()
+        slot_id = 0
+        for waypt in waypoints:
+            if self.tick > waypt["time"]:
+                slot_id += 1
+            else:
+                break
+        waypt_loc = waypoints[slot_id]["lcoation"]
+        deadline = waypoints[slot_id]["time"]
+        ## TODO
+
 
     '''def decalre_pub_zone_status(self):
         key = "zone"
