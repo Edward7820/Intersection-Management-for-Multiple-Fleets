@@ -29,6 +29,7 @@ class MyVehicle():
         self.des_lane_id = des_lane_id
         self.delta = delta
         self.finish = False # pass the intersection or not
+        self.tick = 0
 
     def declare_pub_state(self):
         key = f"state/{self.lane_id}/{self.fleet_id}/{self.vehicle_id}"
@@ -87,6 +88,7 @@ class MyVehicle():
         average_v = vector_mul_scalar(vector_add(self.velocity, original_velocity), 0.5)
         displacement = vector_mul_scalar(average_v, self.delta)
         self.location = vector_add(self.location, displacement)
+        self.tick += self.delta
 
 class Member(MyVehicle):
     def __init__(self, session, velocity: Tuple, location: Tuple, 
@@ -141,6 +143,50 @@ class Member(MyVehicle):
         key = f"final/{self.lane_id}/{self.fleet_id}"
         self.subscriber_final_assignment = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
         
+    def get_front_veh_state(self):
+        return self.state_record[self.vehicle_id - 1]
+    
+    def get_waypoints(self):
+        # return: a list of dict
+        waypoints = []
+        deadlines = self.final_assignment[(self.lane_id, self.fleet_id, self.vehicle_id)]
+        sorted_deadlines = sorted(deadlines)
+        zone_idx_list = get_conflict_zone_idx(self.lane_id, self.des_lane_id)
+        for _ in range(len(zone_idx_list)):
+            waypoints.append(dict())
+        waypoints[-1]["time"] = max(deadlines)
+        if self.des_lane_id == 0:
+            waypoints[-1]["location"] = (4,-2)
+        elif self.des_lane_id == 1:
+            waypoints[-1]["location"] = (2,4)
+        elif self.des_lane_id == 2:
+            waypoints[-1]["location"] = (-4,2)
+        elif self.des_lane_id == 3:
+            waypoints[-1]["location"] = (-2,-4)
+        if len(zone_idx_list) >= 2:
+            waypoints[-2]["time"] = sorted_deadlines[-2]
+            if self.des_lane_id == 0:
+                waypoints[-2]["location"] = (0,-2)
+            elif self.des_lane_id == 1:
+                waypoints[-2]["location"] = (2,0)
+            elif self.des_lane_id == 2:
+                waypoints[-2]["location"] = (0,2)
+            elif self.des_lane_id == 3:
+                waypoints[-2]["location"] = (-2,0)
+        if len(zone_idx_list) >= 3:
+            waypoints[-3]["time"] == sorted_deadlines[-3]
+            if self.des_lane_id == 0:
+                waypoints[-3]["location"] = (-2,0)
+            elif self.des_lane_id == 1:
+                waypoints[-3]["location"] = (0,-2)
+            elif self.des_lane_id == 2:
+                waypoints[-3]["location"] = (2,0)
+            elif self.des_lane_id == 3:
+                waypoints[-3]["location"] = (0,2)
+    
+    def update_acceleration(self):
+        ## TODO: waypoint pursuing
+        pass
 
     '''def decalre_pub_zone_status(self):
         key = "zone"
