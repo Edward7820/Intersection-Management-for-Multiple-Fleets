@@ -6,6 +6,7 @@ import json
 import zenoh
 from datetime import datetime
 from API.Vehicle import MyVehicle, Leader, Member
+from API.math_utils import *
 import os, signal
 from multiprocessing import Process, Array
 from typing import List, Dict, Tuple
@@ -19,7 +20,7 @@ RUNNING = 4
 
 def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int, 
     fleet_len: int,  vid: int, location: tuple, velocity: tuple, 
-    acceleration: tuple, rounds):
+    acceleration: tuple, rounds, location_info, velocity_info, finished_list):
     print(f"start running vehicle {lane_id}-{fid}-{vid} (pid: {pid})")
     # print(veh_num, pid, des_lane_id, fleet_len, location, velocity, acceleration)
     delta_t = args.delta_t
@@ -34,6 +35,10 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
     cur_round = 1
     phase = SCHEDULE_GROUP_FORMING
     while(True):
+        location_info[pid*2] = myvehicle.location[0]
+        location_info[pid*2+1] = myvehicle.location[1]
+        velocity_info[pid*2] = myvehicle.velocity[0]
+        velocity_info[pid*2+1] = myvehicle.velocity[1]
         rounds[pid] = cur_round
 
         ## wait for other processes
@@ -45,10 +50,22 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
             else:
                 time.sleep(1)
 
-        # print(f"lane_id: {lane_id}, fid: {fid}, vid: {vid} (pid: {pid}), current round: {cur_round}, phase: {phase}")
+        if pid == 0:
+            ## collision detection
+            for i in range(veh_num):
+                if finished_list[i] == 1:
+                    continue
+                for j in range(veh_num):
+                    if j == pid or finished_list[j] == 1:
+                        continue
+                    location1 = (location_info[2*i], location_info[2*i+1])
+                    location2 = (location_info[2*j], location_info[2*j+1])
+                    if euclidean_dist(location1, location2) <= 1:
+                        print(f"Collision detected between vehicle {i} (location: {location1}) and vehicle{j} (location: {location2}).")
 
         if myvehicle.finish_cross():
             print(f"vehicle {lane_id}-{fid}-{vid} (pid: {pid}) has crossed the intersection.")
+            finished_list[pid] = 1
             cur_round += 1
             continue
 
@@ -111,6 +128,11 @@ def main():
     veh_num = int(basic_info[1])
     rounds = Array('i', [0]*veh_num)
 
+    # To detect collisions
+    location_info = Array('d', [0]*(veh_num*2))
+    velocity_info = Array('d', [0]*(veh_num*2))
+    finished_list = Array('i',[0]*veh_num)
+
     fleets = [None]*fleets_num
     line_index = 1
     veh_processes = []
@@ -135,13 +157,19 @@ def main():
             vel_y = float(l[4])
             acc_x = float(l[5])
             acc_y = float(l[6])
+            pid = len(veh_processes)
+            location_info[pid*2] = loc_x
+            location_info[pid*2+1] = loc_y
+            velocity_info[pid*2] = vel_x
+            velocity_info[pid*2+1] = vel_y
             fleets[i]['vehicles'].append({'vid':vid, 'location':(loc_x,loc_y),
                 'velocity':(vel_x,vel_y), 'acceleration':(acc_x,acc_y)})
             line_index += 1
-            veh_proc = Process(target=run_vehicle, args=(veh_num, len(veh_processes), 
+            veh_proc = Process(target=run_vehicle, args=(veh_num, pid, 
                 fleets[i]['lane_id'], fleets[i]['des_lane_id'], 
                 fleets[i]['fid'], fleets[i]['fleet_len'],
-                vid, (loc_x,loc_y), (vel_x,vel_y), (acc_x,acc_y), rounds))
+                vid, (loc_x,loc_y), (vel_x,vel_y), (acc_x,acc_y), rounds, 
+                location_info, velocity_info, finished_list))
             veh_processes.append(veh_proc)
 
     for veh_proc in veh_processes:
