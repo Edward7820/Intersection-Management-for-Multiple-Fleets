@@ -36,6 +36,18 @@ def projection(x1: Tuple[float], x2: Tuple[float]):
     scalar = inner_product(x1, x2)/vector_length(x2[0],x2[1])
     return vector_mul_scalar(x2, scalar)
 
+def get_unit_vector(x: Tuple[float]):
+    length = vector_length(x[0], x[1])
+    return vector_mul_scalar(x, 1/length)
+
+def get_right_normal_vector(x: Tuple[float]):
+    direction_vec = get_unit_vector(x)
+    return (direction_vec[1], -direction_vec[0])
+
+def get_left_normal_vector(x: Tuple[float]):
+    direction_vec = get_unit_vector(x)
+    return (-direction_vec[1], direction_vec[0])
+
 def arrival_time(distance: float, speed: float, acceleration: float):
     t = quadratic(acceleration/2, speed, -distance)
     assert t != None

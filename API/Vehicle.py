@@ -14,6 +14,8 @@ from typing import List, Tuple
 from .Scheduler import Scheduler
 CONFLICT_ZONES = [(0,0,4,4),(-4,0,0,4),(-4,-4,0,0),(0,-4,4,0)]
 MAX_SPEED = 12
+MAX_ACCELERATION = 3
+MIN_ACCELERATION = -3
 
 class MyVehicle():
     def __init__(self, session, velocity: Tuple, location: Tuple, 
@@ -194,10 +196,48 @@ class Member(MyVehicle):
                 slot_id += 1
             else:
                 break
+        if slot_id >= len(waypoints):
+            return
         waypt_loc = waypoints[slot_id]["lcoation"]
         deadline = waypoints[slot_id]["time"]
-        ## TODO
-
+        if (self.des_lane_id-self.lane_id) % 4 == 2:
+            # displacement = vector_sub(waypt_loc, self.location)
+            distance = euclidean_dist(self.location, waypt_loc)
+            speed = vector_length(self.velocity[0], self.velocity[1])
+            direction = get_unit_vector(self.velocity)
+            waypt_speed = 2*distance/(deadline-self.tick) - speed
+            if waypt_speed >= 0:
+                a_tan = (waypt_speed - speed)/(deadline - self.tick)
+            else:
+                a_tan = MIN_ACCELERATION
+            self.acceleration = vector_mul_scalar(direction, a_tan)
+        elif (self.des_lane_id-self.lane_id) % 4 == 3 and slot_id != 1:
+            distance = euclidean_dist(self.location, waypt_loc)
+            speed = vector_length(self.velocity[0], self.velocity[1])
+            direction = get_unit_vector(self.velocity)
+            waypt_speed = 2*distance/(deadline-self.tick) - speed
+            if waypt_speed >= 0:
+                a_tan = (waypt_speed - speed)/(deadline - self.tick)
+            else:
+                a_tan = MIN_ACCELERATION
+            self.acceleration = vector_mul_scalar(direction, a_tan)
+        else:
+            distance = euclidean_dist(self.location, waypt_loc)
+            speed = vector_length(self.velocity[0], self.velocity[1])
+            waypt_speed = 2*distance/(deadline-self.tick) - speed
+            if waypt_speed >= 0:
+                a_tan = (waypt_speed - speed)/(deadline - self.tick)
+            else:
+                a_tan = MIN_ACCELERATION
+            a_normal = speed * speed / 2
+            tan_direction = get_unit_vector(self.velocity)
+            # TODO
+            if (self.des_lane_id-self.lane_id) % 4 == 3:
+                normal_direction = get_left_normal_vector(self.velocity)
+            elif (self.des_lane_id-self.lane_id) % 4 == 1:
+                normal_direction = get_right_normal_vector(self.velocity)
+            self.acceleration = vector_add(vector_mul_scalar(tan_direction, a_tan), vector_mul_scalar(normal_direction, a_normal))
+            
 
     '''def decalre_pub_zone_status(self):
         key = "zone"
