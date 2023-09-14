@@ -60,12 +60,18 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
                         location1 = (location_info[2*i], location_info[2*i+1])
                         location2 = (location_info[2*j], location_info[2*j+1])
                         if euclidean_dist(location1, location2) <= 1:
-                            print(f"Collision detected between vehicle {i} (location: {location1}) and vehicle {j} (location: {location2}).")
+                            print(f"Collision detected between vehicle {i} (location: {location1}) and vehicle {j} (location: {location2}) at {myvehicle.tick} seconds!")
+                            raise 
 
         if myvehicle.finish_cross():
             if finished_list[pid] == 0:
                 print(f"vehicle {lane_id}-{fid}-{vid} (pid: {pid}) has crossed the intersection using {myvehicle.tick} seconds.")
+                with open(args.output_file, "w") as f:
+                    f.write(f"vehicle {lane_id}-{fid}-{vid} (pid: {pid}) has crossed the intersection using {myvehicle.tick} seconds.")
+                    f.flush()
                 finished_list[pid] = 1
+                
+            # print(f"Vehicle {lane_id}-{fid}-{vid} (pid: {pid}) finished round {cur_round}")
             cur_round += 1
             continue
 
@@ -76,41 +82,43 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
         if phase != RUNNING:
             if vid == 0:
                 if phase == SCHEDULE_GROUP_FORMING:
-                    print(pid, myvehicle.schedule_map)
+                    # print(pid, myvehicle.schedule_map)
                     myvehicle.pub_schedule_map()
                     if myvehicle.schedule_group_consensus():
-                        print(f"Fleet {lane_id}-{fid} got final schedule group: {myvehicle.schedule_map}")
+                        # print(f"Fleet {lane_id}-{fid} got final schedule group: {myvehicle.schedule_map}")
                         phase = COLLECT_STATES
                 elif phase == COLLECT_STATES:
                     if myvehicle.all_states_received():
-                        print(f"Fleet {lane_id}-{fid} got all states!")
+                        # print(f"Fleet {lane_id}-{fid} got all states!")
                         phase = COLLECT_PROPOSALS
                 elif phase == COLLECT_PROPOSALS:
                     myvehicle.propose(1000, 1.2)
-                    print(f"Fleet {lane_id}-{fid} proposed time slot assignment: {myvehicle.proposal}")
+                    # print(f"Fleet {lane_id}-{fid} proposed time slot assignment: {myvehicle.proposal}")
                     myvehicle.pub_propose()
                     if myvehicle.all_proposal_received():
-                        print(f"Fleet {lane_id}-{fid} received all proposals!")
+                        # print(f"Fleet {lane_id}-{fid} received all proposals!")
                         phase = COLLECT_SCORES
                 elif phase == COLLECT_SCORES:
                     myvehicle.pub_score()
                     if myvehicle.all_score_received():
-                        print(f"Fleet {lane_id}-{fid} received all score!")
+                        # print(f"Fleet {lane_id}-{fid} received all score!")
                         myvehicle.get_final_assignment()
-                        print(f"Final assignment for Fleet {lane_id}-{fid}: {myvehicle.final_assignment}")
+                        print(f"Final assignment for vehicle {lane_id}-{fid}-{vid}: {myvehicle.final_assignment}")
+                        myvehicle.pub_final_assignment()
                         phase = RUNNING
             else:
                 if len(myvehicle.final_assignment) > 0:
+                    print(f"Final assignment for vehicle {lane_id}-{fid}-{vid}: {myvehicle.final_assignment}")
                     phase = RUNNING
         else:
             myvehicle.step_vehicle()
             myvehicle.update_acceleration()
-            if finished_list[pid] == 0 and (myvehicle.tick // delta_t) % 10 == 0:
+            if finished_list[pid] == 0 and (myvehicle.tick // delta_t) % 5 == 0:
                 print(f"State of the vehicle {lane_id}-{fid}-{vid} at time {myvehicle.tick}: location {myvehicle.location}, velocity {myvehicle.velocity}, acceleration {myvehicle.acceleration}")
 
         # print(f"Vehicle {lane_id}-{fid}-{vid} (pid: {pid}) finished round {cur_round}")
-        if pid == 0:
-            print(f"round {cur_round}")
+        # if pid == 0:
+        #     print(f"round {cur_round}")
         cur_round += 1
 
 
@@ -121,6 +129,7 @@ def main():
     parser.add_argument("--max_speed",type=float,default=16)
     parser.add_argument("--max_acceleration",type=float,default=3)
     parser.add_argument("--min_acceleration",type=float,default=-3)
+    parser.add_argument("--output_file", type=str, default="output.txt")
     global args
     args = parser.parse_args()
 

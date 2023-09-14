@@ -16,6 +16,7 @@ CONFLICT_ZONES = [(0,0,4,4),(-4,0,0,4),(-4,-4,0,0),(0,-4,4,0)]
 MAX_SPEED = 12
 MAX_ACCELERATION = 3
 MIN_ACCELERATION = -3
+SAFETY_GAP = 1.5
 
 class MyVehicle():
     def __init__(self, session, velocity: Tuple, location: Tuple, 
@@ -99,7 +100,7 @@ class MyVehicle():
         deadlines = self.final_assignment[(self.lane_id, self.fleet_id, self.vehicle_id)]
         sorted_deadlines = sorted(deadlines)
         zone_idx_list = get_conflict_zone_idx(self.lane_id, self.des_lane_id)
-        for _ in range(len(zone_idx_list)):
+        for _ in range(len(zone_idx_list)+1):
             waypoints.append(dict())
         waypoints[-1]["time"] = max(deadlines)
         if self.des_lane_id == 0:
@@ -130,6 +131,21 @@ class MyVehicle():
                 waypoints[-3]["location"] = (2,0)
             elif self.des_lane_id == 3:
                 waypoints[-3]["location"] = (0,2)
+
+        if self.lane_id == 0:
+            waypoints[0]["location"] = (4,2)
+        elif self.lane_id == 1:
+            waypoints[0]["location"] = (-2,4)
+        elif self.lane_id == 2:
+            waypoints[0]["location"] = (-4,-2)
+        else:
+            waypoints[0]["location"] = (2,-4)
+        first_zone_schedule = [t[zone_idx_list[0]] for t in self.final_assignment.values()]
+        first_zone_schedule = filter(lambda t: t < deadlines[zone_idx_list[0]], first_zone_schedule)
+        last_veh_leave_first_zone_time = max(first_zone_schedule)
+        if last_veh_leave_first_zone_time < 0:
+            last_veh_leave_first_zone_time = 0
+        waypoints[0]["time"] = last_veh_leave_first_zone_time
         return waypoints
     
     def get_acceleration_linear_motion(self, waypt_loc, deadline):
@@ -160,7 +176,7 @@ class MyVehicle():
         deadline = waypoints[slot_id]["time"]
         if (self.des_lane_id-self.lane_id) % 4 == 2:
             self.acceleration = self.get_acceleration_linear_motion(waypt_loc, deadline)
-        elif (self.des_lane_id-self.lane_id) % 4 == 3 and slot_id != 1:
+        elif (self.des_lane_id-self.lane_id) % 4 == 3 and slot_id != 2:
             self.acceleration = self.get_acceleration_linear_motion(waypt_loc, deadline)
         else:
             distance = euclidean_dist(self.location, waypt_loc)
@@ -365,7 +381,7 @@ class Leader(MyVehicle):
 
     def propose(self, num_iter, alpha):
         ## propose a schedule based on the states of other vehicles
-        scheduler = Scheduler(CONFLICT_ZONES,self.fleets_state_record,1.5,self.lane_id,self.fleet_id,alpha)
+        scheduler = Scheduler(CONFLICT_ZONES,self.fleets_state_record,SAFETY_GAP,self.lane_id,self.fleet_id,alpha)
         passing_order = scheduler.search(num_iter)
         time_slot = scheduler.passing_order_to_time_slot(passing_order)
         self.proposal = time_slot
@@ -389,17 +405,21 @@ class Leader(MyVehicle):
     def declare_sub_propose(self):
         # self.other_proposal = dict()
         def listener(sample: Sample):
-            receive = sample.payload.decode('utf-8').split(':')
-            lane_id = int(receive[0].split(',')[0])
-            fleet_id = int(receive[0].split(',')[1])
-            self.all_proposal[(lane_id, fleet_id)] = dict()
-            rec_proposal = receive[1].split(';')
-            for s in rec_proposal[:(-1)]:
-                s = s.split(',')
-                veh = (int(s[0]),int(s[1]),int(s[2]))
-                deadlines = [float(s[3]),float(s[4]),float(s[5]),float(s[6])]
-                self.all_proposal[(lane_id,fleet_id)][veh] = deadlines
-                
+            try:
+                receive = sample.payload.decode('utf-8').split(':')
+                lane_id = int(receive[0].split(',')[0])
+                fleet_id = int(receive[0].split(',')[1])
+                self.all_proposal[(lane_id, fleet_id)] = dict()
+                rec_proposal = receive[1].split(';')
+                for s in rec_proposal[:(-1)]:
+                    s = s.split(',')
+                    veh = (int(s[0]),int(s[1]),int(s[2]))
+                    deadlines = [float(s[3]),float(s[4]),float(s[5]),float(s[6])]
+                    self.all_proposal[(lane_id,fleet_id)][veh] = deadlines
+            except:
+                print(f"received {receive} at key proposal/**")
+                raise NotImplementedError
+
         key = "proposal/**"
         self.subscriber_proposal = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
 
@@ -487,7 +507,7 @@ class Leader(MyVehicle):
             deadlines = self.final_assignment[veh]
             assert len(veh) == 3 and len(deadlines) == 4
             pub_content += f"{veh[0]},{veh[1]},{veh[2]},{deadlines[0]},{deadlines[1]},{deadlines[2]},{deadlines[3]};"    
-        self.publisher_propose.put(pub_content)
+        self.publisher_final_assignment.put(pub_content)
                 
     '''def declare_sub_zone_status(self, wait_time=5):
         def listener(sample: Sample):
