@@ -32,6 +32,7 @@ class MyVehicle():
         self.delta = delta
         self.finish = False # pass the intersection or not
         self.tick = 0
+        self.final_assignment = dict()
 
     def declare_pub_state(self):
         key = f"state/{self.lane_id}/{self.fleet_id}/{self.vehicle_id}"
@@ -76,7 +77,7 @@ class MyVehicle():
             
     def step_vehicle(self):
         ## update its own state
-        original_velocity = self.velocity.copy()
+        original_velocity = self.velocity
         delta_v = vector_mul_scalar(self.acceleration, self.delta)
         self.velocity = vector_add(original_velocity, delta_v)
         if inner_product(original_velocity, self.velocity) < 0:
@@ -92,62 +93,6 @@ class MyVehicle():
         self.location = vector_add(self.location, displacement)
         self.tick += self.delta
 
-class Member(MyVehicle):
-    def __init__(self, session, velocity: Tuple, location: Tuple, 
-    acceleration: Tuple, vehicle_id: int, fleet_id: int, lane_id: int, 
-    des_lane_id: int, delta:float):
-        super().__init__(session, velocity, location, acceleration, vehicle_id, 
-        fleet_id, lane_id, des_lane_id, delta)
-        self.state_record = [None]*16
-        self.zone_idx_list = get_conflict_zone_idx(self.lane_id, self.des_lane_id)
-        self.final_assignment = dict()
-        # self.publisher_state = None
-        # self.subscriber_state = None
-        # self.subscriber_final_assignment = None
-
-        self.declare_pub_state()
-        self.declare_sub_state()
-
-        self.declare_sub_final_assignment()
-
-        # self.decalre_pub_zone_status()
-        print(f"initialize vehicle {self.lane_id}-{self.fleet_id}-{self.vehicle_id}")
-
-    def declare_sub_state(self):
-        def listener(sample: Sample):
-            # print(f">> [Subscriber] Received {sample.kind} ('{sample.key_expr}': '{sample.payload.decode('utf-8')}')")
-            receive = sample.payload.decode('utf-8').split(',')
-            state = {
-                "location": (float(receive[3]),float(receive[4])),
-                "velocity": (float(receive[5]),float(receive[6])),
-                "acceleration": (float(receive[7]),float(receive[8])),
-                "des_lane_id": int(receive[9])
-            }
-            rec_lane_id = int(receive[0])
-            rec_fleet_id = int(receive[1])
-            rec_vehicle_id = int(receive[2])
-            rec_finish = int(receive[10])
-            if rec_finish==0:
-                self.state_record[rec_vehicle_id] = state
-
-        key = f"state/{self.lane_id}/{self.fleet_id}/**"
-        self.subscriber_state = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
-
-    def declare_sub_final_assignment(self):
-        def listener(sample: Sample):
-            receive = sample.payload.decode('utf-8').split(';')[:(-1)]
-            for r in receive:
-                r = r.split(',')
-                veh = (int(r[0]),int(r[1]),int(r[2]))
-                deadlines = [float(r[3]),float(r[4]),float(r[5]),float(r[6])]
-                self.final_assignment[veh] = deadlines
-        
-        key = f"final/{self.lane_id}/{self.fleet_id}"
-        self.subscriber_final_assignment = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
-        
-    def get_front_veh_state(self):
-        return self.state_record[self.vehicle_id - 1]
-    
     def get_waypoints(self):
         # return: a list of dict
         waypoints = []
@@ -198,7 +143,7 @@ class Member(MyVehicle):
                 break
         if slot_id >= len(waypoints):
             return
-        waypt_loc = waypoints[slot_id]["lcoation"]
+        waypt_loc = waypoints[slot_id]["location"]
         deadline = waypoints[slot_id]["time"]
         if (self.des_lane_id-self.lane_id) % 4 == 2:
             # displacement = vector_sub(waypt_loc, self.location)
@@ -237,8 +182,63 @@ class Member(MyVehicle):
             elif (self.des_lane_id-self.lane_id) % 4 == 1:
                 normal_direction = get_right_normal_vector(self.velocity)
             self.acceleration = vector_add(vector_mul_scalar(tan_direction, a_tan), vector_mul_scalar(normal_direction, a_normal))
-            
 
+class Member(MyVehicle):
+    def __init__(self, session, velocity: Tuple, location: Tuple, 
+    acceleration: Tuple, vehicle_id: int, fleet_id: int, lane_id: int, 
+    des_lane_id: int, delta:float):
+        super().__init__(session, velocity, location, acceleration, vehicle_id, 
+        fleet_id, lane_id, des_lane_id, delta)
+        self.state_record = [None]*16
+        self.zone_idx_list = get_conflict_zone_idx(self.lane_id, self.des_lane_id)
+        # self.final_assignment = dict()
+        # self.publisher_state = None
+        # self.subscriber_state = None
+        # self.subscriber_final_assignment = None
+
+        self.declare_pub_state()
+        self.declare_sub_state()
+
+        self.declare_sub_final_assignment()
+
+        # self.decalre_pub_zone_status()
+        print(f"initialize vehicle {self.lane_id}-{self.fleet_id}-{self.vehicle_id}")
+
+    def declare_sub_state(self):
+        def listener(sample: Sample):
+            # print(f">> [Subscriber] Received {sample.kind} ('{sample.key_expr}': '{sample.payload.decode('utf-8')}')")
+            receive = sample.payload.decode('utf-8').split(',')
+            state = {
+                "location": (float(receive[3]),float(receive[4])),
+                "velocity": (float(receive[5]),float(receive[6])),
+                "acceleration": (float(receive[7]),float(receive[8])),
+                "des_lane_id": int(receive[9])
+            }
+            rec_lane_id = int(receive[0])
+            rec_fleet_id = int(receive[1])
+            rec_vehicle_id = int(receive[2])
+            rec_finish = int(receive[10])
+            if rec_finish==0:
+                self.state_record[rec_vehicle_id] = state
+
+        key = f"state/{self.lane_id}/{self.fleet_id}/**"
+        self.subscriber_state = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
+
+    def declare_sub_final_assignment(self):
+        def listener(sample: Sample):
+            receive = sample.payload.decode('utf-8').split(';')[:(-1)]
+            for r in receive:
+                r = r.split(',')
+                veh = (int(r[0]),int(r[1]),int(r[2]))
+                deadlines = [float(r[3]),float(r[4]),float(r[5]),float(r[6])]
+                self.final_assignment[veh] = deadlines
+        
+        key = f"final/{self.lane_id}/{self.fleet_id}"
+        self.subscriber_final_assignment = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
+        
+    def get_front_veh_state(self):
+        return self.state_record[self.vehicle_id - 1]
+    
     '''def decalre_pub_zone_status(self):
         key = "zone"
         self.pub_zone_status = self.session.declare_publisher(key)
@@ -269,7 +269,7 @@ class Leader(MyVehicle):
         self.proposal = None
         self.all_proposal = dict()
         self.all_score = dict()
-        self.final_assignment = dict()
+        # self.final_assignment = dict()
         '''self.publisher_schedule_map = None
         self.publisher_state = None
         self.publisher_propose = None
@@ -492,7 +492,6 @@ class Leader(MyVehicle):
             assert len(veh) == 3 and len(deadlines) == 4
             pub_content += f"{veh[0]},{veh[1]},{veh[2]},{deadlines[0]},{deadlines[1]},{deadlines[2]},{deadlines[3]};"    
         self.publisher_propose.put(pub_content)
-
                 
     '''def declare_sub_zone_status(self, wait_time=5):
         def listener(sample: Sample):
