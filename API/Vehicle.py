@@ -132,12 +132,25 @@ class MyVehicle():
                 waypoints[-3]["location"] = (0,2)
         return waypoints
     
+    def get_acceleration_linear_motion(self, waypt_loc, deadline):
+        distance = euclidean_dist(self.location, waypt_loc)
+        speed = vector_length(self.velocity[0], self.velocity[1])
+        direction = get_unit_vector(self.velocity)
+        waypt_speed = 2*distance/(deadline-self.tick) - speed
+        if waypt_speed >= 0:
+            a_tan = (waypt_speed - speed)/(deadline - self.tick)
+            if a_tan > MAX_ACCELERATION:
+                a_tan = MAX_ACCELERATION
+        else:
+            a_tan = MIN_ACCELERATION
+        return vector_mul_scalar(direction, a_tan)
+    
     def update_acceleration(self):
         ## waypoints pursuing
         waypoints = self.get_waypoints()
         slot_id = 0
         for waypt in waypoints:
-            if self.tick > waypt["time"]:
+            if self.tick >= waypt["time"]:
                 slot_id += 1
             else:
                 break
@@ -146,26 +159,9 @@ class MyVehicle():
         waypt_loc = waypoints[slot_id]["location"]
         deadline = waypoints[slot_id]["time"]
         if (self.des_lane_id-self.lane_id) % 4 == 2:
-            # displacement = vector_sub(waypt_loc, self.location)
-            distance = euclidean_dist(self.location, waypt_loc)
-            speed = vector_length(self.velocity[0], self.velocity[1])
-            direction = get_unit_vector(self.velocity)
-            waypt_speed = 2*distance/(deadline-self.tick) - speed
-            if waypt_speed >= 0:
-                a_tan = (waypt_speed - speed)/(deadline - self.tick)
-            else:
-                a_tan = MIN_ACCELERATION
-            self.acceleration = vector_mul_scalar(direction, a_tan)
+            self.acceleration = self.get_acceleration_linear_motion(waypt_loc, deadline)
         elif (self.des_lane_id-self.lane_id) % 4 == 3 and slot_id != 1:
-            distance = euclidean_dist(self.location, waypt_loc)
-            speed = vector_length(self.velocity[0], self.velocity[1])
-            direction = get_unit_vector(self.velocity)
-            waypt_speed = 2*distance/(deadline-self.tick) - speed
-            if waypt_speed >= 0:
-                a_tan = (waypt_speed - speed)/(deadline - self.tick)
-            else:
-                a_tan = MIN_ACCELERATION
-            self.acceleration = vector_mul_scalar(direction, a_tan)
+            self.acceleration = self.get_acceleration_linear_motion(waypt_loc, deadline)
         else:
             distance = euclidean_dist(self.location, waypt_loc)
             speed = vector_length(self.velocity[0], self.velocity[1])

@@ -56,15 +56,16 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
                 if finished_list[i] == 1:
                     continue
                 for j in range(veh_num):
-                    if j != pid and finished_list[j] == 0:
+                    if j != i and finished_list[j] == 0:
                         location1 = (location_info[2*i], location_info[2*i+1])
                         location2 = (location_info[2*j], location_info[2*j+1])
                         if euclidean_dist(location1, location2) <= 1:
                             print(f"Collision detected between vehicle {i} (location: {location1}) and vehicle {j} (location: {location2}).")
 
         if myvehicle.finish_cross():
-            print(f"vehicle {lane_id}-{fid}-{vid} (pid: {pid}) has crossed the intersection using {myvehicle.tick} seconds.")
-            finished_list[pid] = 1
+            if finished_list[pid] == 0:
+                print(f"vehicle {lane_id}-{fid}-{vid} (pid: {pid}) has crossed the intersection using {myvehicle.tick} seconds.")
+                finished_list[pid] = 1
             cur_round += 1
             continue
 
@@ -104,7 +105,7 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
         else:
             myvehicle.step_vehicle()
             myvehicle.update_acceleration()
-            if (myvehicle.tick // delta_t) % 10 == 0:
+            if finished_list[pid] == 0 and (myvehicle.tick // delta_t) % 10 == 0:
                 print(f"State of the vehicle {lane_id}-{fid}-{vid} at time {myvehicle.tick}: location {myvehicle.location}, velocity {myvehicle.velocity}, acceleration {myvehicle.acceleration}")
 
         # print(f"Vehicle {lane_id}-{fid}-{vid} (pid: {pid}) finished round {cur_round}")
