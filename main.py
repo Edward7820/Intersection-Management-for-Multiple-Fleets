@@ -10,6 +10,7 @@ from API.math_utils import *
 import os, signal
 from multiprocessing import Process, Array
 from typing import List, Dict, Tuple
+CONFLICT_ZONES = [(0,0,4,4),(-4,0,0,4),(-4,-4,0,0),(0,-4,4,0)]
 MAX_VEH_NUM = 100
 
 SCHEDULE_GROUP_FORMING = 0
@@ -109,10 +110,16 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
                                 f.write(f"Final assignment: {myvehicle.final_assignment}\n")
                                 f.flush()
                         myvehicle.pub_final_assignment()
+                        with open(args.output_file, "a") as f:
+                            f.write(f"waypoints of vehicle {lane_id}-{fid}-{vid}: {myvehicle.get_waypoints(CONFLICT_ZONES)}\n")
+                            f.flush()
                         phase = RUNNING
             else:
                 if len(myvehicle.final_assignment) > 0:
                     print(f"Final assignment for vehicle {lane_id}-{fid}-{vid}: {myvehicle.final_assignment}")
+                    with open(args.output_file, "a") as f:
+                        f.write(f"waypoints of vehicle {lane_id}-{fid}-{vid}: {myvehicle.get_waypoints(CONFLICT_ZONES)}\n")
+                        f.flush()
                     phase = RUNNING
         else:
             myvehicle.step_vehicle()

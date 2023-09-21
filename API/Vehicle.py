@@ -21,6 +21,8 @@ MAX_SPEED = 12
 MAX_ACCELERATION = 3
 MIN_ACCELERATION = -5
 SAFETY_GAP = 1.5
+MAX_FLEET_SIZE = 16
+TURNING_RADIUS = 2
 
 class MyVehicle():
     def __init__(self, session, velocity: Tuple, location: Tuple, 
@@ -38,6 +40,7 @@ class MyVehicle():
         self.finish = False # pass the intersection or not
         self.tick = 0
         self.final_assignment = dict()
+        self.state_record = [None]*MAX_FLEET_SIZE
 
     def declare_pub_state(self):
         key = f"state/{self.lane_id}/{self.fleet_id}/{self.vehicle_id}"
@@ -160,18 +163,27 @@ class MyVehicle():
             direction = get_unit_vector(displacement)
         else:
             direction = get_unit_vector(self.velocity)
-        target_direction = get_unit_vector(vector_sub(waypt_loc, self.location))
+        target_direction = get_unit_vector(displacement)
         if inner_product(direction, target_direction) > 0:
             waypt_speed = 2*distance/(deadline-self.tick) - speed
             if waypt_speed >= 0:
                 a_tan = (waypt_speed - speed)/(deadline - self.tick)
                 if a_tan > MAX_ACCELERATION:
-                    a_tan = MAX_ACCELERATION
+                    a_tan = MAX_ACCELERATION    
             else:
                 if speed < 1:
                     a_tan = 0
                 else:
+                    a_tan = MIN_ACCELERATION'
+
+            # remain safety distance to the front car
+            if self.vehicle_id > 0 and self.state_record[self.vehicle_id-1] != None:
+                front_car_loc = self.state_record[self.vehicle_id-1]["location"]
+                front_car_dist = euclidean_dist(self.location, front_car_loc)
+                if speed >= 0.1 and front_car_dist / speed < 1.5:
                     a_tan = MIN_ACCELERATION
+                elif speed >= 0.1 and front_car_dist / speed < 2.5:
+                    a_tan = MIN_ACCELERATION / 2
         else:
             a_tan = MIN_ACCELERATION
         return vector_mul_scalar(direction, a_tan)
@@ -194,26 +206,19 @@ class MyVehicle():
         elif (self.des_lane_id-self.lane_id) % 4 == 3 and slot_id != 2:
             self.acceleration = self.get_acceleration_linear_motion(waypt_loc, deadline)
         else:
-            distance = euclidean_dist(self.location, waypt_loc)
-            speed = vector_length(self.velocity[0], self.velocity[1])
+            self.acceleration = self.get_acceleration_linear_motion(waypt_loc, deadline)
             target_direction = get_unit_vector(vector_sub(waypt_loc, self.location))
-            tan_direction = get_unit_vector(self.velocity)
-            if inner_product(target_direction, tan_direction) >= 0:
-                waypt_speed = 2*distance/(deadline-self.tick) - speed
-                if waypt_speed >= 0:
-                    a_tan = (waypt_speed - speed)/(deadline - self.tick)
-                elif speed < 1:
-                    a_tan = 0
-                else:
-                    a_tan = MIN_ACCELERATION
+            speed = vector_length(self.velocity[0], self.velocity[1])
+            if speed < 0.001:
+                tan_direction = target_direction
             else:
-                a_tan = MIN_ACCELERATION
-            a_normal = speed * speed / 2
+                tan_direction = get_unit_vector(self.velocity)
+            a_normal = speed * speed / TURNING_RADIUS
             if not right_or_left(tan_direction, target_direction):
-                normal_direction = get_left_normal_vector(self.velocity)
+                normal_direction = get_left_normal_vector(tan_direction)
             else:
-                normal_direction = get_right_normal_vector(self.velocity)
-            self.acceleration = vector_add(vector_mul_scalar(tan_direction, a_tan), vector_mul_scalar(normal_direction, a_normal))
+                normal_direction = get_right_normal_vector(tan_direction)
+            self.acceleration = vector_add(self.acceleration, vector_mul_scalar(normal_direction, a_normal))
 
 class Member(MyVehicle):
     def __init__(self, session, velocity: Tuple, location: Tuple, 
@@ -221,7 +226,6 @@ class Member(MyVehicle):
     des_lane_id: int, delta:float):
         super().__init__(session, velocity, location, acceleration, vehicle_id, 
         fleet_id, lane_id, des_lane_id, delta)
-        self.state_record = [None]*16
         self.zone_idx_list = get_conflict_zone_idx(self.lane_id, self.des_lane_id)
         # self.final_assignment = dict()
         # self.publisher_state = None
@@ -252,6 +256,8 @@ class Member(MyVehicle):
             rec_finish = int(receive[10])
             if rec_finish==0:
                 self.state_record[rec_vehicle_id] = state
+            else:
+                self.state_record[rec_vehicle_id] = None
 
         key = f"state/{self.lane_id}/{self.fleet_id}/**"
         self.subscriber_state = self.session.declare_subscriber(key, listener, reliability=Reliability.RELIABLE())
