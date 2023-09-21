@@ -10,6 +10,7 @@ from API.math_utils import *
 import os, signal
 from multiprocessing import Process, Array
 from typing import List, Dict, Tuple
+import matplotlib.pyplot as plt
 CONFLICT_ZONES = [(0,0,4,4),(-4,0,0,4),(-4,-4,0,0),(0,-4,4,0)]
 MAX_VEH_NUM = 100
 
@@ -62,7 +63,16 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
                         location2 = (location_info[2*j], location_info[2*j+1])
                         if euclidean_dist(location1, location2) <= 1:
                             print(f"Collision detected between vehicle {i} (location: {location1}) and vehicle {j} (location: {location2}) at {myvehicle.tick} seconds!")
-                            raise 
+                            raise
+
+            if (myvehicle.tick // delta_t) % 5 == 0:
+                fig, ax = plt.subplots()  
+                ax.set_xlim(-30,30)  
+                ax.set_ylim(-30,30)
+                for i in range(veh_num):
+                    ax.scatter(location_info[2*i], location_info[2*i+1], c=(0.3*(i/3), 0.3*(i%3), 0))
+                plt.savefig("figure_{:.2f}.png".format(myvehicle.tick))
+
 
         if myvehicle.finish_cross():
             if finished_list[pid] == 0:
