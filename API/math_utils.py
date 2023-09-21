@@ -1,5 +1,9 @@
 import math
 from typing import Tuple
+X_MIN = 0
+X_MAX = 2
+Y_MIN = 0
+Y_MAX = 3
 
 def vector_length(x: float, y: float):
     return math.sqrt(x**2+y**2)
@@ -47,6 +51,12 @@ def get_right_normal_vector(x: Tuple[float]):
 def get_left_normal_vector(x: Tuple[float]):
     direction_vec = get_unit_vector(x)
     return (-direction_vec[1], direction_vec[0])
+
+def right_or_left(base: Tuple[float], target: Tuple[float]):
+    if base[0] * target[1] - base[1] * target[0] >= 0:
+        return False # left
+    else:
+        return True # right
 
 def arrival_time(distance: float, speed: float, acceleration: float):
     t = quadratic(acceleration/2, speed, -distance)
@@ -117,3 +127,17 @@ def get_min_arrival_time(conflict_zones, lane_id, des_lane_id, location, speed):
     min_arrival_time = arrival_time_for_zone(location,speed,conflict_zones,zone_idx_list,0)
     min_arrival_time += len(zone_idx_list)*zone_size/speed
     return min_arrival_time
+
+def conflict_zone_north_point(zone):
+    # zone: (x_min, y_min, x_max, y_max)
+    return ((zone[X_MIN]+zone[X_MAX])/2, zone[Y_MAX])
+
+def conflict_zone_east_point(zone):
+    return (zone[X_MAX], (zone[Y_MIN]+zone[Y_MAX])/2)
+
+def conflict_zone_south_point(zone):
+    # zone: (x_min, y_min, x_max, y_max)
+    return ((zone[X_MIN]+zone[X_MAX])/2, zone[Y_MIN])
+
+def conflict_zone_west_point(zone):
+    return (zone[X_MIN], (zone[Y_MIN]+zone[Y_MAX])/2)

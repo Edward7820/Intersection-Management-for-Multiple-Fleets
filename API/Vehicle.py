@@ -13,9 +13,13 @@ from . import Simulator
 from typing import List, Tuple
 from .Scheduler import Scheduler
 CONFLICT_ZONES = [(0,0,4,4),(-4,0,0,4),(-4,-4,0,0),(0,-4,4,0)]
+X_MIN = 0
+X_MAX = 2
+Y_MIN = 1
+Y_MAX = 3
 MAX_SPEED = 12
 MAX_ACCELERATION = 3
-MIN_ACCELERATION = -3
+MIN_ACCELERATION = -5
 SAFETY_GAP = 1.5
 
 class MyVehicle():
@@ -94,7 +98,7 @@ class MyVehicle():
         self.location = vector_add(self.location, displacement)
         self.tick += self.delta
 
-    def get_waypoints(self):
+    def get_waypoints(self, conflict_zones):
         # return: a list of dict
         waypoints = []
         deadlines = self.final_assignment[(self.lane_id, self.fleet_id, self.vehicle_id)]
@@ -104,42 +108,42 @@ class MyVehicle():
             waypoints.append(dict())
         waypoints[-1]["time"] = max(deadlines)
         if self.des_lane_id == 0:
-            waypoints[-1]["location"] = (4,-2)
+            waypoints[-1]["location"] = conflict_zone_east_point(conflict_zones[3])
         elif self.des_lane_id == 1:
-            waypoints[-1]["location"] = (2,4)
+            waypoints[-1]["location"] = conflict_zone_north_point(conflict_zones[0])
         elif self.des_lane_id == 2:
-            waypoints[-1]["location"] = (-4,2)
+            waypoints[-1]["location"] = conflict_zone_west_point(conflict_zones[1])
         elif self.des_lane_id == 3:
-            waypoints[-1]["location"] = (-2,-4)
+            waypoints[-1]["location"] = conflict_zone_south_point(conflict_zones[2])
         if len(zone_idx_list) >= 2:
             waypoints[-2]["time"] = sorted_deadlines[-2]
             if self.des_lane_id == 0:
-                waypoints[-2]["location"] = (0,-2)
+                waypoints[-2]["location"] = conflict_zone_west_point(conflict_zones[3])
             elif self.des_lane_id == 1:
-                waypoints[-2]["location"] = (2,0)
+                waypoints[-2]["location"] = conflict_zone_south_point(conflict_zones[0])
             elif self.des_lane_id == 2:
-                waypoints[-2]["location"] = (0,2)
+                waypoints[-2]["location"] = conflict_zone_east_point(conflict_zones[1])
             elif self.des_lane_id == 3:
-                waypoints[-2]["location"] = (-2,0)
+                waypoints[-2]["location"] = conflict_zone_north_point(conflict_zones[2])
         if len(zone_idx_list) >= 3:
             waypoints[-3]["time"] == sorted_deadlines[-3]
             if self.des_lane_id == 0:
-                waypoints[-3]["location"] = (-2,0)
+                waypoints[-3]["location"] = conflict_zone_north_point(conflict_zones[2])
             elif self.des_lane_id == 1:
-                waypoints[-3]["location"] = (0,-2)
+                waypoints[-3]["location"] = conflict_zone_west_point(conflict_zones[3])
             elif self.des_lane_id == 2:
-                waypoints[-3]["location"] = (2,0)
+                waypoints[-3]["location"] = conflict_zone_south_point(conflict_zones[0])
             elif self.des_lane_id == 3:
-                waypoints[-3]["location"] = (0,2)
+                waypoints[-3]["location"] = conflict_zone_east_point(conflict_zones[1])
 
         if self.lane_id == 0:
-            waypoints[0]["location"] = (4,2)
+            waypoints[0]["location"] = conflict_zone_east_point(conflict_zones[0])
         elif self.lane_id == 1:
-            waypoints[0]["location"] = (-2,4)
+            waypoints[0]["location"] = conflict_zone_north_point(conflict_zones[1])
         elif self.lane_id == 2:
-            waypoints[0]["location"] = (-4,-2)
+            waypoints[0]["location"] = conflict_zone_west_point(conflict_zones[2])
         else:
-            waypoints[0]["location"] = (2,-4)
+            waypoints[0]["location"] = conflict_zone_south_point(conflict_zones[3])
         first_zone_schedule = [t[zone_idx_list[0]] for t in self.final_assignment.values()]
         first_zone_schedule = filter(lambda t: t < deadlines[zone_idx_list[0]], first_zone_schedule)
         last_veh_leave_first_zone_time = max(first_zone_schedule)
@@ -150,20 +154,31 @@ class MyVehicle():
     
     def get_acceleration_linear_motion(self, waypt_loc, deadline):
         distance = euclidean_dist(self.location, waypt_loc)
+        displacement = vector_sub(waypt_loc, self.location)
         speed = vector_length(self.velocity[0], self.velocity[1])
-        direction = get_unit_vector(self.velocity)
-        waypt_speed = 2*distance/(deadline-self.tick) - speed
-        if waypt_speed >= 0:
-            a_tan = (waypt_speed - speed)/(deadline - self.tick)
-            if a_tan > MAX_ACCELERATION:
-                a_tan = MAX_ACCELERATION
+        if speed < 0.1:
+            direction = get_unit_vector(displacement)
+        else:
+            direction = get_unit_vector(self.velocity)
+        target_direction = get_unit_vector(vector_sub(waypt_loc, self.location))
+        if inner_product(direction, target_direction) > 0:
+            waypt_speed = 2*distance/(deadline-self.tick) - speed
+            if waypt_speed >= 0:
+                a_tan = (waypt_speed - speed)/(deadline - self.tick)
+                if a_tan > MAX_ACCELERATION:
+                    a_tan = MAX_ACCELERATION
+            else:
+                if speed < 1:
+                    a_tan = 0
+                else:
+                    a_tan = MIN_ACCELERATION
         else:
             a_tan = MIN_ACCELERATION
         return vector_mul_scalar(direction, a_tan)
     
     def update_acceleration(self):
         ## waypoints pursuing
-        waypoints = self.get_waypoints()
+        waypoints = self.get_waypoints(CONFLICT_ZONES)
         slot_id = 0
         for waypt in waypoints:
             if self.tick >= waypt["time"]:
@@ -181,17 +196,22 @@ class MyVehicle():
         else:
             distance = euclidean_dist(self.location, waypt_loc)
             speed = vector_length(self.velocity[0], self.velocity[1])
-            waypt_speed = 2*distance/(deadline-self.tick) - speed
-            if waypt_speed >= 0:
-                a_tan = (waypt_speed - speed)/(deadline - self.tick)
+            target_direction = get_unit_vector(vector_sub(waypt_loc, self.location))
+            tan_direction = get_unit_vector(self.velocity)
+            if inner_product(target_direction, tan_direction) >= 0:
+                waypt_speed = 2*distance/(deadline-self.tick) - speed
+                if waypt_speed >= 0:
+                    a_tan = (waypt_speed - speed)/(deadline - self.tick)
+                elif speed < 1:
+                    a_tan = 0
+                else:
+                    a_tan = MIN_ACCELERATION
             else:
                 a_tan = MIN_ACCELERATION
             a_normal = speed * speed / 2
-            tan_direction = get_unit_vector(self.velocity)
-            # TODO
-            if (self.des_lane_id-self.lane_id) % 4 == 3:
+            if not right_or_left(tan_direction, target_direction):
                 normal_direction = get_left_normal_vector(self.velocity)
-            elif (self.des_lane_id-self.lane_id) % 4 == 1:
+            else:
                 normal_direction = get_right_normal_vector(self.velocity)
             self.acceleration = vector_add(vector_mul_scalar(tan_direction, a_tan), vector_mul_scalar(normal_direction, a_normal))
 

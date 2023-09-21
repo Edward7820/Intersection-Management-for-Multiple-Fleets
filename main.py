@@ -66,11 +66,11 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
         if myvehicle.finish_cross():
             if finished_list[pid] == 0:
                 print(f"vehicle {lane_id}-{fid}-{vid} (pid: {pid}) has crossed the intersection using {myvehicle.tick} seconds.")
-                with open(args.output_file, "w") as f:
-                    f.write(f"vehicle {lane_id}-{fid}-{vid} (pid: {pid}) has crossed the intersection using {myvehicle.tick} seconds.")
+                with open(args.output_file, "a") as f:
+                    f.write(f"vehicle {lane_id}-{fid}-{vid} (pid: {pid}) has crossed the intersection using {myvehicle.tick} seconds.\n")
                     f.flush()
                 finished_list[pid] = 1
-                
+
             # print(f"Vehicle {lane_id}-{fid}-{vid} (pid: {pid}) finished round {cur_round}")
             cur_round += 1
             continue
@@ -104,6 +104,10 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
                         # print(f"Fleet {lane_id}-{fid} received all score!")
                         myvehicle.get_final_assignment()
                         print(f"Final assignment for vehicle {lane_id}-{fid}-{vid}: {myvehicle.final_assignment}")
+                        if pid == 0:
+                            with open(args.output_file, "a") as f:
+                                f.write(f"Final assignment: {myvehicle.final_assignment}\n")
+                                f.flush()
                         myvehicle.pub_final_assignment()
                         phase = RUNNING
             else:
@@ -114,7 +118,7 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
             myvehicle.step_vehicle()
             myvehicle.update_acceleration()
             if finished_list[pid] == 0 and (myvehicle.tick // delta_t) % 5 == 0:
-                print(f"State of the vehicle {lane_id}-{fid}-{vid} at time {myvehicle.tick}: location {myvehicle.location}, velocity {myvehicle.velocity}, acceleration {myvehicle.acceleration}")
+                print(f"State of the vehicle {lane_id}-{fid}-{vid} at time {round(myvehicle.tick,3)}: location {myvehicle.location}, velocity {myvehicle.velocity}, acceleration {myvehicle.acceleration}")
 
         # print(f"Vehicle {lane_id}-{fid}-{vid} (pid: {pid}) finished round {cur_round}")
         # if pid == 0:
