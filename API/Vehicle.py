@@ -174,7 +174,7 @@ class MyVehicle():
                 if speed < 1:
                     a_tan = 0
                 else:
-                    a_tan = MIN_ACCELERATION'
+                    a_tan = MIN_ACCELERATION
 
             # remain safety distance to the front car
             if self.vehicle_id > 0 and self.state_record[self.vehicle_id-1] != None:
