@@ -66,8 +66,17 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
                             raise
 
             if (myvehicle.tick // delta_t) % 5 == 0 and phase == RUNNING:
+                fig, ax = plt.subplots()
+                ax.set_xlim(-10,10)
+                ax.set_ylim(-10,10)
+                ax.plot([-10,10],[4,4])
+                ax.plot([4,4],[10,-10])
+                ax.plot([10,-10],[-4,-4])
+                ax.plot([-4,-4],[-10,10])
+                ax.plot([-10,10],[0,0],linestyle='dashed')
+                ax.plot([0,0],[-10,10],linestyle='dashed')
                 for i in range(veh_num):
-                    plt.plot(location_info[2*i], location_info[2*i+1], label=i)
+                    ax.scatter(location_info[2*i], location_info[2*i+1], label=f"{i}")
                 plt.savefig("figure_{:.2f}.png".format(myvehicle.tick))
 
 

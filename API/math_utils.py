@@ -2,7 +2,7 @@ import math
 from typing import Tuple
 X_MIN = 0
 X_MAX = 2
-Y_MIN = 0
+Y_MIN = 1
 Y_MAX = 3
 
 def vector_length(x: float, y: float):
