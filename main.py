@@ -65,7 +65,7 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
                             print(f"Collision detected between vehicle {i} (location: {location1}) and vehicle {j} (location: {location2}) at {myvehicle.tick} seconds!")
                             raise
 
-            if (myvehicle.tick // delta_t) % 5 == 0 and phase == RUNNING:
+            if phase == RUNNING:
                 fig, ax = plt.subplots()
                 ax.set_xlim(-10,10)
                 ax.set_ylim(-10,10)
@@ -76,8 +76,9 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
                 ax.plot([-10,10],[0,0],linestyle='dashed')
                 ax.plot([0,0],[-10,10],linestyle='dashed')
                 for i in range(veh_num):
-                    ax.scatter(location_info[2*i], location_info[2*i+1], label=f"{i}")
-                plt.savefig("figure_{:.2f}.png".format(myvehicle.tick))
+                    if finished_list[i] == 0:
+                        ax.scatter(location_info[2*i], location_info[2*i+1], label=f"{i}")
+                plt.savefig("figure.png".format(myvehicle.tick))
 
 
         if myvehicle.finish_cross():

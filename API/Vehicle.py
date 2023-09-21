@@ -159,7 +159,7 @@ class MyVehicle():
         distance = euclidean_dist(self.location, waypt_loc)
         displacement = vector_sub(waypt_loc, self.location)
         speed = vector_length(self.velocity[0], self.velocity[1])
-        if speed < 0.1:
+        if speed < 0.001:
             direction = get_unit_vector(displacement)
         else:
             direction = get_unit_vector(self.velocity)
@@ -184,6 +184,9 @@ class MyVehicle():
                     a_tan = MIN_ACCELERATION
                 elif speed >= 0.1 and front_car_dist / speed < 2.5:
                     a_tan = MIN_ACCELERATION / 2
+                elif front_car_dist < 5:
+                    a_tan = MIN_ACCELERATION
+
         else:
             a_tan = MIN_ACCELERATION
         return vector_mul_scalar(direction, a_tan)
