@@ -50,7 +50,7 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
             if all([r>=cur_round for r in rounds]):
                 waiting = False
             else:
-                time.sleep(1)
+                time.sleep(0.5)
             
         if pid == 0:
             ## collision detection
@@ -89,7 +89,7 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
             if finished_list[pid] == 0:
                 print(f"vehicle {lane_id}-{fid}-{vid} (pid: {pid}) has crossed the intersection using {myvehicle.tick} seconds.")
                 with open(args.output_file, "a") as f:
-                    f.write(f"vehicle {lane_id}-{fid}-{vid} (pid: {pid}) has crossed the intersection using {myvehicle.tick} seconds.\n")
+                    f.write(f"vehicle {lane_id}-{fid}-{vid} (pid: {pid}) has crossed the intersection using {round(myvehicle.tick,2)} seconds.\n")
                     f.flush()
                 finished_list[pid] = 1
 
@@ -147,8 +147,6 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
             myvehicle.update_acceleration()
             if finished_list[pid] == 0 and (myvehicle.tick // delta_t) % 5 == 0:
                 print(f"State of the vehicle {lane_id}-{fid}-{vid} at time {round(myvehicle.tick,3)}: location {myvehicle.location}, velocity {myvehicle.velocity}, acceleration {myvehicle.acceleration}")
-            if vid != 0:
-                print(f"State record of the vehicle {lane_id}-{fid}-{vid} at time {round(myvehicle.tick,3)}: {myvehicle.state_record}")
         # print(f"Vehicle {lane_id}-{fid}-{vid} (pid: {pid}) finished round {cur_round}")
         # if pid == 0:
         #     print(f"round {cur_round}")
