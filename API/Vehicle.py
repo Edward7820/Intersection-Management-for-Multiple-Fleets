@@ -20,8 +20,8 @@ Y_MAX = 3
 MAX_SPEED = 12
 MAX_ACCELERATION = 3
 MIN_ACCELERATION = -5
-SAFETY_GAP = 1.5
-MAX_FLEET_SIZE = 16
+SAFETY_GAP = 0.5
+MAX_FLEET_SIZE = 8
 TURNING_RADIUS = 2
 
 class MyVehicle():
@@ -63,28 +63,30 @@ class MyVehicle():
     def finish_cross(self) -> bool:
         ## judge whether the vehicle has crossed the intersection
         if self.des_lane_id == 0:
-            if self.location[0] >= 4:
+            if self.location[0] >= CONFLICT_ZONES[3][X_MAX]:
                 return True
             else:
                 return False
         elif self.des_lane_id == 1:
-            if self.location[1] >= 4:
+            if self.location[1] >= CONFLICT_ZONES[0][Y_MAX]:
                 return True
             else:
                 return False
         elif self.des_lane_id == 2:
-            if self.location[0] <= -4:
+            if self.location[0] <= CONFLICT_ZONES[1][X_MIN]:
                 return True
             else:
                 return False
         else:
-            if self.location[1] <= -4:
+            if self.location[1] <= CONFLICT_ZONES[2][Y_MIN]:
                 return True
             else:
                 return False
             
     def step_vehicle(self):
         ## update its own state
+        if self.finish:
+            return
         original_velocity = self.velocity
         delta_v = vector_mul_scalar(self.acceleration, self.delta)
         self.velocity = vector_add(original_velocity, delta_v)
@@ -100,6 +102,8 @@ class MyVehicle():
         displacement = vector_mul_scalar(average_v, self.delta)
         self.location = vector_add(self.location, displacement)
         self.tick += self.delta
+        if self.finish_cross():
+            self.finish = True
 
     def get_waypoints(self, conflict_zones):
         # return: a list of dict
@@ -157,6 +161,8 @@ class MyVehicle():
     
     def get_acceleration_linear_motion(self, waypt_loc, deadline):
         distance = euclidean_dist(self.location, waypt_loc)
+        if distance < 0.001:
+            return (0,0)
         displacement = vector_sub(waypt_loc, self.location)
         speed = vector_length(self.velocity[0], self.velocity[1])
         if speed < 0.001:
@@ -164,6 +170,13 @@ class MyVehicle():
         else:
             direction = get_unit_vector(self.velocity)
         target_direction = get_unit_vector(displacement)
+        if deadline == None: # delay
+            if inner_product(direction, target_direction) > 0:
+                a_tan = MAX_ACCELERATION
+                return vector_mul_scalar(direction, a_tan)
+            else:
+                a_tan = MIN_ACCELERATION
+                return vector_mul_scalar(direction, a_tan)
         if inner_product(direction, target_direction) > 0:
             waypt_speed = 2*distance/(deadline-self.tick) - speed
             if waypt_speed >= 0:
@@ -196,14 +209,16 @@ class MyVehicle():
         waypoints = self.get_waypoints(CONFLICT_ZONES)
         slot_id = 0
         for waypt in waypoints:
-            if self.tick >= waypt["time"]:
+            if self.tick >= waypt["time"]-0.1:
                 slot_id += 1
             else:
                 break
         if slot_id >= len(waypoints):
-            return
-        waypt_loc = waypoints[slot_id]["location"]
-        deadline = waypoints[slot_id]["time"]
+            waypt_loc = waypoints[-1]["location"]
+            deadline = None
+        else:
+            waypt_loc = waypoints[slot_id]["location"]
+            deadline = waypoints[slot_id]["time"]
         if (self.des_lane_id-self.lane_id) % 4 == 2:
             self.acceleration = self.get_acceleration_linear_motion(waypt_loc, deadline)
         elif (self.des_lane_id-self.lane_id) % 4 == 3 and slot_id != 2:
@@ -257,7 +272,7 @@ class Member(MyVehicle):
             rec_fleet_id = int(receive[1])
             rec_vehicle_id = int(receive[2])
             rec_finish = int(receive[10])
-            if rec_finish==0:
+            if rec_finish == 0:
                 self.state_record[rec_vehicle_id] = state
             else:
                 self.state_record[rec_vehicle_id] = None

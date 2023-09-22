@@ -1,17 +1,10 @@
-import sys
-import time
-from argparse import ArgumentParser
-import itertools
-import json
+from API.Vehicle import MyVehicle, Leader, Member
 import zenoh
-from zenoh import Config
-from datetime import datetime
-from API.Vehicle import MyVehicle, Leader
-import os, signal
-from multiprocessing import Process, Array
-from typing import List, Dict, Tuple
+import time
 
-session = zenoh.open(Config())
-myvehicle = Leader(session, (10,0), (0,0), (0,0), 0, 0, 1, 0.1, 3, 5)
+session = zenoh.open()
+vehicle = Member(session, (10, 0), (1, -2), (0,0), 1, 2, 2, 0, 0.1)
 while True:
-    pass
+    vehicle.pub_state()
+    print(vehicle.state_record)
+    time.sleep(2)

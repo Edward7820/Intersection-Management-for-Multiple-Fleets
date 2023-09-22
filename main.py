@@ -62,7 +62,7 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
                         location1 = (location_info[2*i], location_info[2*i+1])
                         location2 = (location_info[2*j], location_info[2*j+1])
                         if euclidean_dist(location1, location2) <= 1:
-                            print(f"Collision detected between vehicle {i} (location: {location1}) and vehicle {j} (location: {location2}) at {myvehicle.tick} seconds!")
+                            print(f"Collision detected between vehicle {i} (location: {location1}) and vehicle {j} (location: {location2}) at {round(myvehicle.tick,3)} seconds!")
                             raise
 
             if phase == RUNNING:
@@ -82,6 +82,10 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
 
 
         if myvehicle.finish_cross():
+            if not myvehicle.finish:
+                myvehicle.finish = True
+            myvehicle.pub_state() # Tell the other vehicles that it has already crossed the intersection
+            
             if finished_list[pid] == 0:
                 print(f"vehicle {lane_id}-{fid}-{vid} (pid: {pid}) has crossed the intersection using {myvehicle.tick} seconds.")
                 with open(args.output_file, "a") as f:
@@ -143,7 +147,8 @@ def run_vehicle(veh_num: int, pid: int, lane_id: int, des_lane_id: int, fid: int
             myvehicle.update_acceleration()
             if finished_list[pid] == 0 and (myvehicle.tick // delta_t) % 5 == 0:
                 print(f"State of the vehicle {lane_id}-{fid}-{vid} at time {round(myvehicle.tick,3)}: location {myvehicle.location}, velocity {myvehicle.velocity}, acceleration {myvehicle.acceleration}")
-
+            if vid != 0:
+                print(f"State record of the vehicle {lane_id}-{fid}-{vid} at time {round(myvehicle.tick,3)}: {myvehicle.state_record}")
         # print(f"Vehicle {lane_id}-{fid}-{vid} (pid: {pid}) finished round {cur_round}")
         # if pid == 0:
         #     print(f"round {cur_round}")
